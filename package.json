@@ -1,0 +1,18 @@
+{
+  "name": "breaktime-arcade",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A web-based collection of quick party games for the classroom — first title: Who's Undercover?",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @arcade/client --filter @arcade/server dev",
+    "dev:client": "pnpm --filter @arcade/client dev",
+    "dev:server": "pnpm --filter @arcade/server dev",
+    "build": "pnpm --filter @arcade/client build",
+    "test": "pnpm --filter @arcade/shared test",
+    "typecheck": "pnpm -r typecheck",
+    "start": "pnpm --filter @arcade/server start"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

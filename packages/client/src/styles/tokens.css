@@ -1,0 +1,54 @@
+/* ── Breaktime Arcade design tokens ─────────────────────────────
+   Bright, classroom-friendly, Kahoot-inspired — not plain, not gaudy. */
+
+:root {
+  /* Brand */
+  --violet-900: #2d0b5e;
+  --violet-800: #46178f;   /* primary — hero / header / projector backdrops */
+  --violet-700: #5b2ab5;
+  --violet-600: #6f3bd4;
+  --violet-100: #ece4fa;
+  --violet-050: #f6f2fc;
+
+  /* Group colours (fixed, carried everywhere) */
+  --group-a: #e0344a;  /* red */
+  --group-b: #2e6fe0;  /* blue */
+  --group-c: #f5a623;  /* amber */
+  --group-d: #2fa24b;  /* green */
+
+  /* Semantic */
+  --accent: #ff8a00;          /* CTA orange — pops against the violet */
+  --accent-press: #e57a00;
+  --success: #2fa24b;
+  --danger: #e0344a;
+
+  /* Neutrals */
+  --ink: #221833;
+  --ink-soft: #5c5470;
+  --surface: #ffffff;
+  --bg: #f6f2fc;
+  --line: #e5dcf5;
+
+  /* Shape & depth */
+  --radius-s: 10px;
+  --radius-m: 16px;
+  --radius-l: 24px;
+  --shadow-s: 0 1px 3px rgb(45 11 94 / 0.10);
+  --shadow-m: 0 4px 14px rgb(45 11 94 / 0.14);
+  --shadow-l: 0 10px 30px rgb(45 11 94 / 0.20);
+
+  /* Motion */
+  --t-fast: 160ms;
+  --t-med: 280ms;
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Type scale */
+  --font: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-fast: 0ms;
+    --t-med: 0ms;
+  }
+}
