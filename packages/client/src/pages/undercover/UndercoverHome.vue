@@ -24,7 +24,7 @@ const modes: Mode[] = [
     title: 'Presenter Demo',
     desc: 'Demonstrate the rules on one screen — no real secrets handed out.',
     emoji: '📽️',
-    soon: true,
+    to: '/undercover/demo',
   },
   {
     title: 'How to Play',

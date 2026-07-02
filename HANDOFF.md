@@ -13,9 +13,9 @@
 2. `breaktime-arcade-project-plan-v2.md` — 用户的产品规划（规则细节、Host Dashboard、词库原则）
 3. `README.md`（英式英语）/ `README.zh-CN.md`（中文附属）
 
-## 当前状态：Online Room 双模式（team / groups）端到端可玩 ✅
+## 当前状态：Online Room 双模式（team / groups）端到端可玩 + Presenter Demo 上线 ✅
 
-Pass & Play 仍可玩；**Online Room 后端 + Host Dashboard + 玩家端全部接通**，单机已验证（typecheck 三包过、26/26 单测过、生产构建过、server 冒烟过、两种模式 smoke 过）。
+Pass & Play 仍可玩；**Online Room 后端 + Host Dashboard + 玩家端全部接通**，单机已验证（typecheck 三包过、26/26 单测过、生产构建过、server 冒烟过、两种模式 smoke 过）。**Presenter Demo** 已上线（`/undercover/demo`），7 步交互式演示，投影友好，无真实秘密。
 
 ```
 packages/
@@ -67,7 +67,7 @@ Get-NetTCPConnection -LocalPort 3211 -State Listen | Select -ExpandProperty Owni
 Online Room 双模式 LAN 单机全通；剩下：
 
 1. **真机 LAN 联调**（最优先）：两台设备扫码跑一整局，两种模式都测。重点验校园网 Client Isolation（§11）。
-2. **Presenter Demo**（用户已要求）：投影演示规则 + 模拟一局，不发真实秘密。网络/设备全挂的兜底（Pass & Play 已是兜底，Demo 是额外）。
+2. ~~**Presenter Demo**（用户已要求）：投影演示规则 + 模拟一局，不发真实秘密。~~ ✅ 已完成（`/undercover/demo`，7 步交互式演示）。
 3. **Projector View**（§15.4）：独立全屏投影页，Kahoot 式，只显公开状态，**绝不泄秘密**——与 host 的 Reveal answers 物理分离。
 4. **连接切换器**（§6.5）：`Auto | Public | LAN` 开关 + `/health` 探测 + `projector:endpoint` 换二维码。关键差异：**Tunnel+LAN 同房无痛切换；Cloud 独立房间，回退需重进**。
 5. Cloudflare Tunnel + Cloud Docker 部署跑通，固定域名二维码课前打印。

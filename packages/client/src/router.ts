@@ -40,6 +40,11 @@ export const router = createRouter({
       component: () => import('./pages/undercover/PassPlayGame.vue'),
     },
     {
+      path: '/undercover/demo',
+      name: 'presenter-demo',
+      component: () => import('./pages/undercover/PresenterDemo.vue'),
+    },
+    {
       path: '/undercover/how-to-play',
       name: 'how-to-play',
       component: () => import('./pages/undercover/HowToPlay.vue'),
