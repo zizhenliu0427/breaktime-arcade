@@ -125,19 +125,19 @@ export const useOnlinePlayerStore = defineStore('onlinePlayer', {
     canIVote(): boolean {
       return this.phase === 'vote' && this.myAlive && this.myVote === null;
     },
-    voteTargets(): { id: string; name: string }[] {
+    voteTargets(): { id: string; name: string; isSelf: boolean }[] {
       if (!this.room || this.phase !== 'vote') return [];
       if (this.mode === 'team') {
         const myGid = this.me?.groupId;
         return Object.values(this.room.groups)
-          .filter((g) => g.alive && g.id !== myGid)
-          .map((g) => ({ id: g.id, name: g.name }));
+          .filter((g) => g.alive)
+          .map((g) => ({ id: g.id, name: g.name, isSelf: g.id === myGid }));
       }
       const g = this.myGroup;
       if (!g) return [];
       return (this.room.players ?? [])
-        .filter((p) => p.groupId === g.id && p.alive && p.id !== this.playerId)
-        .map((p) => ({ id: p.id, name: p.name }));
+        .filter((p) => p.groupId === g.id && p.alive)
+        .map((p) => ({ id: p.id, name: p.name, isSelf: p.id === this.playerId }));
     },
     winner(): Winner | null {
       if (!this.room) return null;

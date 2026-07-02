@@ -54,12 +54,20 @@ watch(() => player.phase, () => {
   choice.value = null;
 });
 
+const isSelfVote = computed(() => {
+  if (!choice.value) return false;
+  return player.voteTargets.find((t) => t.id === choice.value)?.isSelf ?? false;
+});
+
 function pickGroup(id: string | null) {
   void player.pickGroup(id);
 }
 
 function confirmVote() {
   if (!choice.value) return;
+  if (isSelfVote.value) {
+    if (!window.confirm('You are voting for yourself! Are you sure?')) return;
+  }
   const target = choice.value;
   choice.value = null;
   void player.vote(target);
@@ -240,15 +248,18 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
                 class="target"
                 role="radio"
                 :aria-checked="choice === t.id"
-                :class="{ chosen: choice === t.id }"
+                :class="{ chosen: choice === t.id, 'self-target': t.isSelf }"
                 @click="choice = choice === t.id ? null : t.id"
               >
-                <span class="target-name">{{ t.name }}</span>
+                <span class="target-name">{{ t.name }}<span v-if="t.isSelf" class="you-tag"> (you)</span></span>
                 <span v-if="choice === t.id" class="check pop">✓</span>
               </button>
             </div>
+            <div v-if="isSelfVote" class="self-warn" role="alert">
+              ⚠️ You are about to vote for yourself. This is allowed but rarely a good idea!
+            </div>
             <BaseButton variant="accent" size="lg" block :disabled="!choice" @click="confirmVote">
-              Confirm vote
+              {{ isSelfVote ? '⚠️ Confirm self-vote' : 'Confirm vote' }}
             </BaseButton>
           </template>
           <div v-else class="voted">
@@ -645,6 +656,26 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
   place-items: center;
   font-size: 0.9rem;
   box-shadow: var(--shadow-s);
+}
+
+.self-target {
+  border: 2px dashed var(--accent);
+}
+
+.you-tag {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.self-warn {
+  background: #fdf1dc;
+  color: #8a5b00;
+  font-weight: 700;
+  border-radius: var(--radius-s);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
 }
 
 .voted {

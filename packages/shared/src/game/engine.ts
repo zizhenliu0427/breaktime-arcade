@@ -77,11 +77,10 @@ export function eligibleVoters(game: LocalGame): string[] {
   return alive;
 }
 
-/** Ids of players who may be voted for in the current ballot. */
-export function eligibleTargets(game: LocalGame, voterId: string): string[] {
+/** Ids of players who may be voted for in the current ballot (includes self). */
+export function eligibleTargets(game: LocalGame, _voterId: string): string[] {
   const alive = game.players.filter((p) => p.alive).map((p) => p.id);
-  const pool = game.isRunoffVote && game.runoffCandidates ? game.runoffCandidates : alive;
-  return pool.filter((id) => id !== voterId);
+  return game.isRunoffVote && game.runoffCandidates ? game.runoffCandidates : alive;
 }
 
 export function castVote(game: LocalGame, voterId: string, targetId: string): LocalGame {

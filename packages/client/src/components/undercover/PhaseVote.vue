@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import BaseButton from '../ui/BaseButton.vue';
 import HandoverMask from './HandoverMask.vue';
 import { usePassPlayStore } from '../../stores/passPlay';
@@ -7,8 +7,16 @@ import { usePassPlayStore } from '../../stores/passPlay';
 const store = usePassPlayStore();
 const choice = ref<string | null>(null);
 
+const isSelfVote = computed(() => {
+  if (!choice.value || !store.currentVoter) return false;
+  return choice.value === store.currentVoter.id;
+});
+
 function confirm() {
   if (!choice.value) return;
+  if (isSelfVote.value) {
+    if (!window.confirm('You are voting for yourself! Are you sure?')) return;
+  }
   const target = choice.value;
   choice.value = null;
   store.submitVote(target);
@@ -39,16 +47,20 @@ function confirm() {
         class="target"
         role="radio"
         :aria-checked="choice === target.id"
-        :class="{ chosen: choice === target.id }"
+        :class="{ chosen: choice === target.id, 'self-target': store.currentVoter?.id === target.id }"
         @click="choice = choice === target.id ? null : target.id"
       >
-        <span class="target-name">{{ target.name }}</span>
+        <span class="target-name">{{ target.name }}<span v-if="store.currentVoter?.id === target.id" class="you-tag"> (you)</span></span>
         <span v-if="choice === target.id" class="check pop">✓</span>
       </button>
     </div>
 
+    <div v-if="isSelfVote" class="self-warn" role="alert">
+      ⚠️ You are about to vote for yourself. This is allowed but rarely a good idea!
+    </div>
+
     <BaseButton variant="accent" size="lg" block :disabled="!choice" @click="confirm">
-      Confirm vote
+      {{ isSelfVote ? '⚠️ Confirm self-vote' : 'Confirm vote' }}
     </BaseButton>
 
     <div class="progress">
@@ -116,6 +128,26 @@ h2 {
   place-items: center;
   font-size: 0.9rem;
   box-shadow: var(--shadow-s);
+}
+
+.self-target {
+  border: 2px dashed var(--accent);
+}
+
+.you-tag {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.self-warn {
+  background: #fdf1dc;
+  color: #8a5b00;
+  font-weight: 700;
+  border-radius: var(--radius-s);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
 }
 
 .progress {

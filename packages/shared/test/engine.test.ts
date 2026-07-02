@@ -131,12 +131,13 @@ describe('voting', () => {
     expect(top).toEqual(['x']);
   });
 
-  it('rejects self-votes and votes from the dead', () => {
+  it('accepts self-votes and rejects votes from the dead', () => {
     let g = toVotePhase(freshGame());
     const voter = eligibleVoters(g)[0]!;
     const before = g;
     g = castVote(g, voter, voter);
-    expect(g).toBe(before); // self-vote ignored
+    expect(g).not.toBe(before); // self-vote accepted
+    expect(g.votes[voter]).toBe(voter);
   });
 
   it('eliminates the clear top target and reveals the role', () => {
