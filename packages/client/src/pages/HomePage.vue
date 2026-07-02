@@ -10,13 +10,29 @@ interface GameCard {
 }
 
 const games: GameCard[] = [
+  // ── Available ──────────────────────────
   {
     title: "Who's Undercover?",
     emoji: '🕵️',
     available: true,
     to: '/undercover',
-    tags: ['4–10 players', '5–10 minutes', 'One device or a room'],
+    tags: ['4–10 players', '5–10 min', 'Social deduction'],
   },
+  // ── Social deduction ───────────────────
+  { title: "Liar's Bar", emoji: '🤥', available: false, tags: ['2–4 players', 'Bluffing', 'Cards + Dice'] },
+  { title: 'Werewolf', emoji: '🐺', available: false, tags: ['6–12 players', 'Day & Night', 'Social deduction'] },
+  { title: 'Avalon', emoji: '⚔️', available: false, tags: ['5–10 players', 'Team missions', 'Social deduction'] },
+  { title: 'One Night Werewolf', emoji: '🌙', available: false, tags: ['3–10 players', '10 min', 'Quick deduction'] },
+  // ── Card games ─────────────────────────
+  { title: 'Blackjack', emoji: '🂡', available: false, tags: ['1–7 players', 'vs Dealer', 'Classic'] },
+  { title: 'Texas Hold\'em', emoji: '♠️', available: false, tags: ['2–9 players', 'Poker', 'Betting rounds'] },
+  { title: 'Stud Poker', emoji: '♦️', available: false, tags: ['2–6 players', 'Poker', '5-card showdown'] },
+  { title: 'Dou Di Zhu', emoji: '🃏', available: false, tags: ['3 players', 'Landlord vs Farmers', '斗地主'] },
+  // ── Reaction / Party ───────────────────
+  { title: 'Halli Galli', emoji: '🔔', available: false, tags: ['2–6 players', 'Speed reaction', '德国心脏病'] },
+  // ── Board / Tile games ─────────────────
+  { title: 'Mahjong', emoji: '🀄', available: false, tags: ['4 players', 'Tile matching', '麻将'] },
+  // ── Original party games ───────────────
   { title: 'Last Card', emoji: '🃏', available: false, tags: ['2–8 players', 'Turn-based'] },
   { title: 'Draw & Guess', emoji: '🎨', available: false, tags: ['Teams', 'Fast rounds'] },
   { title: 'Charades', emoji: '🎭', available: false, tags: ['Act it out'] },
@@ -27,11 +43,13 @@ const games: GameCard[] = [
 /* Floating decorations for the hero — purely visual */
 const decorations = [
   { emoji: '🕵️', style: { top: '18%', left: '7%', fontSize: '2.2rem', animationDuration: '5.2s' } },
-  { emoji: '🃏', style: { top: '62%', left: '14%', fontSize: '1.7rem', animationDuration: '6.4s', animationDelay: '-2s' } },
-  { emoji: '🎨', style: { top: '24%', right: '9%', fontSize: '2rem', animationDuration: '5.8s', animationDelay: '-1s' } },
-  { emoji: '🎭', style: { top: '66%', right: '16%', fontSize: '1.8rem', animationDuration: '7s', animationDelay: '-3.4s' } },
-  { emoji: '⚡', style: { top: '10%', left: '30%', fontSize: '1.4rem', animationDuration: '6s', animationDelay: '-4.2s' } },
+  { emoji: '🐺', style: { top: '62%', left: '14%', fontSize: '1.7rem', animationDuration: '6.4s', animationDelay: '-2s' } },
+  { emoji: '♠️', style: { top: '24%', right: '9%', fontSize: '2rem', animationDuration: '5.8s', animationDelay: '-1s' } },
+  { emoji: '🀄', style: { top: '66%', right: '16%', fontSize: '1.8rem', animationDuration: '7s', animationDelay: '-3.4s' } },
+  { emoji: '🔔', style: { top: '10%', left: '30%', fontSize: '1.4rem', animationDuration: '6s', animationDelay: '-4.2s' } },
   { emoji: '🤥', style: { top: '14%', right: '28%', fontSize: '1.4rem', animationDuration: '6.8s', animationDelay: '-2.6s' } },
+  { emoji: '🌙', style: { top: '42%', left: '4%', fontSize: '1.5rem', animationDuration: '5.6s', animationDelay: '-1.5s' } },
+  { emoji: '⚔️', style: { top: '38%', right: '5%', fontSize: '1.5rem', animationDuration: '6.2s', animationDelay: '-3s' } },
 ];
 </script>
 
