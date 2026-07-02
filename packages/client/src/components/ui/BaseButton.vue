@@ -5,8 +5,9 @@ withDefaults(
     size?: 'md' | 'lg';
     block?: boolean;
     disabled?: boolean;
+    type?: 'button' | 'submit' | 'reset';
   }>(),
-  { variant: 'primary', size: 'md', block: false, disabled: false },
+  { variant: 'primary', size: 'md', block: false, disabled: false, type: 'button' },
 );
 </script>
 
@@ -15,7 +16,7 @@ withDefaults(
     class="btn"
     :class="[`v-${variant}`, `s-${size}`, { block }]"
     :disabled="disabled"
-    type="button"
+    :type="type"
   >
     <slot />
   </button>

@@ -655,7 +655,7 @@ Host 可以查看当前游戏的完整管理状态，但秘密信息应分层处
 
 Host 私密管理面板可以提供：
 
-> Facilitator reveal
+> Reveal answers
 
 打开后才可查看：
 
@@ -664,7 +664,7 @@ Host 私密管理面板可以提供：
 - 玩家角色
 - 当前答案
 
-Facilitator reveal 必须：
+Reveal answers 必须：
 
 - 默认关闭
 - 与投影视图分离
@@ -1177,7 +1177,7 @@ shared/
 2. 匿名投票完整同步
 3. 断线重连
 4. Host 暂停、跳过和延长计时
-5. Facilitator reveal
+5. Reveal answers
 6. Group Leader 控制
 7. 更完整的淘汰和胜利动画
 8. PWA 离线缓存

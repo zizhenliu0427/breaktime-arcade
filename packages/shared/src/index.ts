@@ -1,4 +1,6 @@
 export * from './types';
+export * from './online';
+export * from './events';
 export * from './game/rng';
 export * from './game/roles';
 export * from './game/order';

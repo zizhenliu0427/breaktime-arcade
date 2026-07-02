@@ -15,6 +15,26 @@ export const router = createRouter({
       component: () => import('./pages/undercover/PassPlaySetup.vue'),
     },
     {
+      path: '/undercover/host',
+      name: 'host-setup',
+      component: () => import('./pages/undercover/HostSetup.vue'),
+    },
+    {
+      path: '/undercover/host/room',
+      name: 'host-room',
+      component: () => import('./pages/undercover/HostRoom.vue'),
+    },
+    {
+      path: '/join/:code',
+      name: 'join',
+      component: () => import('./pages/JoinPage.vue'),
+    },
+    {
+      path: '/play',
+      name: 'play',
+      component: () => import('./pages/PlayPage.vue'),
+    },
+    {
       path: '/undercover/pass-and-play/game',
       name: 'pass-play-game',
       component: () => import('./pages/undercover/PassPlayGame.vue'),

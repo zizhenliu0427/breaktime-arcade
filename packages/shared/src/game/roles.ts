@@ -9,7 +9,7 @@ export function assignRoles(config: LocalGameConfig, rng: Rng): LocalPlayer[] {
   const { playerNames, wordPair, undercoverCount, includeMrWhite } = config;
   const n = playerNames.length;
   const specials = undercoverCount + (includeMrWhite ? 1 : 0);
-  if (n < 3) throw new Error('At least 3 players are required');
+  if (n < 2) throw new Error('At least 2 players are required');
   if (specials >= n - 1) throw new Error('Too many special roles for this group size');
 
   const swap = rng() < 0.5;

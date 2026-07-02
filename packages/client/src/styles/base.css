@@ -6,10 +6,17 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
+  /* Stop an inner element that renders a hair wider than the viewport from
+     dragging the whole page sideways (notoriously on iOS Safari). `clip`
+     avoids creating a scroll container; `hidden` is the legacy fallback. */
+  overflow-x: hidden;
+  /* Long tokens (URLs, room codes) wrap instead of stretching the page. */
+  overflow-wrap: break-word;
   font-family: var(--font);
   color: var(--ink);
   /* Soft colour washes so large empty regions never read as flat */
@@ -33,10 +40,14 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
+  /* Flex items default to min-width: auto, so a wide descendant can stretch
+     the layout past the viewport. Allow the column to shrink to fit. */
+  min-width: 0;
 }
 
 #app > main > * {
   width: 100%;
+  min-width: 0;
 }
 
 h1,
@@ -60,8 +71,13 @@ button {
   touch-action: manipulation;
 }
 
-input {
+input,
+select,
+textarea {
   font: inherit;
+  /* Fill the field's cell and never overshoot it — Safari doesn't reliably
+     stretch a width:auto input/select inside a grid or flex parent. */
+  width: 100%;
 }
 
 :focus-visible {

@@ -277,7 +277,7 @@ Cloud:   🔴 down                          Active endpoint: Tunnel
 ### 阶段 F — 打磨（有时间）
 - [ ] PWA 离线缓存（Pass & Play）
 - [ ] 断线重连（localStorage token）
-- [ ] Host 暂停/跳过/延时、Facilitator reveal
+- [ ] Host 暂停/跳过/延时、Reveal answers
 - [ ] 动画 + 音效 + `prefers-reduced-motion`（§20）
 - [ ] Presenter Demo 模拟一局
 

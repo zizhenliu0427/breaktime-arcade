@@ -65,7 +65,7 @@ The overall feel is **bright, lively and classroom-friendly, in the spirit of Ka
 
 - Secret words / roles are **sent point-to-point to the relevant player only** — never broadcast, never shown on the projector.
 - The host's Projector View defaults to a **safe mode**: it shows only phase, progress, headcount and public results.
-- `Facilitator reveal` lives on the host's private panel, is off by default, and is kept separate from the Projector View.
+- `Reveal answers` lives on the host's private panel, is off by default, and is kept separate from the Projector View.
 - Pass & Play clears the screen immediately after viewing behind a privacy mask; refreshing or navigating back never re-shows the previous player's word.
 
 ---

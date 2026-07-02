@@ -18,7 +18,7 @@ const modes: Mode[] = [
     title: 'Host a Live Room',
     desc: 'The presenter controls the game from a computer while everyone joins by QR code.',
     emoji: '📡',
-    soon: true,
+    to: '/undercover/host',
   },
   {
     title: 'Presenter Demo',
