@@ -12,9 +12,31 @@ body {
   margin: 0;
   font-family: var(--font);
   color: var(--ink);
-  background: var(--bg);
+  /* Soft colour washes so large empty regions never read as flat */
+  background:
+    radial-gradient(700px 460px at 88% -8%, rgb(111 59 212 / 0.09), transparent 70%),
+    radial-gradient(560px 400px at -8% 104%, rgb(255 138 0 / 0.08), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+/* App shell: header / flexible main / footer, always filling the viewport */
+#app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+#app > main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+#app > main > * {
+  width: 100%;
 }
 
 h1,
@@ -49,9 +71,20 @@ input {
 
 /* Shared page shell */
 .page {
+  width: 100%;
   max-width: 720px;
   margin: 0 auto;
   padding: 20px 16px 48px;
+}
+
+.page--wide {
+  max-width: 1100px;
+}
+
+@media (min-width: 900px) {
+  .page {
+    padding: 32px 24px 64px;
+  }
 }
 
 .card {
@@ -92,9 +125,53 @@ input {
   animation: pop-in var(--t-med) var(--ease-pop) both;
 }
 
+/* Gentle idle drift for decorative elements */
+@keyframes float-y {
+  from {
+    transform: translateY(-6px) rotate(-3deg);
+  }
+  to {
+    transform: translateY(10px) rotate(4deg);
+  }
+}
+
+/* Playful shake for emoji on hover */
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(-8deg) scale(1.12);
+  }
+  60% {
+    transform: rotate(8deg) scale(1.12);
+  }
+}
+
+/* Soft breathing pulse for live badges */
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.8);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rise,
   .pop {
     animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

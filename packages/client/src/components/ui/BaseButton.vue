@@ -37,6 +37,11 @@ withDefaults(
   box-shadow: var(--shadow-s);
 }
 
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-m);
+}
+
 .btn:active:not(:disabled) {
   transform: translateY(2px) scale(0.99);
   box-shadow: none;

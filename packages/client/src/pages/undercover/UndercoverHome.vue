@@ -36,7 +36,7 @@ const modes: Mode[] = [
 </script>
 
 <template>
-  <div class="page">
+  <div class="page page-undercover">
     <h1 class="rise">🕵️ Who's Undercover?</h1>
     <p class="rise sub" style="animation-delay: 50ms">
       A quick social deduction word game. Choose a mode to begin.
@@ -75,9 +75,24 @@ h1 {
   margin-bottom: 22px;
 }
 
+.page-undercover {
+  max-width: 880px;
+}
+
 .modes {
   display: grid;
   gap: 12px;
+}
+
+@media (min-width: 720px) {
+  .modes {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .mode {
+    padding: 24px;
+  }
 }
 
 .mode {
@@ -94,6 +109,10 @@ h1 {
 a.mode:hover {
   transform: translateY(-3px);
   box-shadow: var(--shadow-m);
+}
+
+a.mode:hover .emoji {
+  animation: wiggle 450ms var(--ease-pop);
 }
 
 .mode h2 {
@@ -113,6 +132,7 @@ a.mode:hover {
 
 .emoji {
   font-size: 1.9rem;
+  display: inline-block;
 }
 
 .soon {

@@ -211,7 +211,19 @@ function start() {
   box-shadow: inset 0 0 0 2px var(--line);
   padding: 14px;
   text-align: left;
-  transition: box-shadow var(--t-fast), background var(--t-fast);
+  transition:
+    box-shadow var(--t-fast),
+    background var(--t-fast),
+    transform var(--t-fast) var(--ease-pop);
+}
+
+.pack:hover {
+  box-shadow: inset 0 0 0 2px var(--violet-600);
+  transform: translateY(-2px);
+}
+
+.pack.active {
+  animation: pop-in var(--t-med) var(--ease-pop);
 }
 
 .pack span {

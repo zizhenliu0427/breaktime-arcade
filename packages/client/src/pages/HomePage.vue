@@ -23,17 +23,32 @@ const games: GameCard[] = [
   { title: 'Two Truths and a Lie', emoji: '🤥', available: false, tags: ['Icebreaker'] },
   { title: 'Quick Categories', emoji: '⚡', available: false, tags: ['Think fast'] },
 ];
+
+/* Floating decorations for the hero — purely visual */
+const decorations = [
+  { emoji: '🕵️', style: { top: '18%', left: '7%', fontSize: '2.2rem', animationDuration: '5.2s' } },
+  { emoji: '🃏', style: { top: '62%', left: '14%', fontSize: '1.7rem', animationDuration: '6.4s', animationDelay: '-2s' } },
+  { emoji: '🎨', style: { top: '24%', right: '9%', fontSize: '2rem', animationDuration: '5.8s', animationDelay: '-1s' } },
+  { emoji: '🎭', style: { top: '66%', right: '16%', fontSize: '1.8rem', animationDuration: '7s', animationDelay: '-3.4s' } },
+  { emoji: '⚡', style: { top: '10%', left: '30%', fontSize: '1.4rem', animationDuration: '6s', animationDelay: '-4.2s' } },
+  { emoji: '🤥', style: { top: '14%', right: '28%', fontSize: '1.4rem', animationDuration: '6.8s', animationDelay: '-2.6s' } },
+];
 </script>
 
 <template>
   <div class="hero">
+    <div class="hero-deco" aria-hidden="true">
+      <span v-for="d in decorations" :key="d.emoji" class="deco" :style="d.style">
+        {{ d.emoji }}
+      </span>
+    </div>
     <h1 class="rise">Breaktime Arcade</h1>
     <p class="rise" style="animation-delay: 60ms">
       Quick party games for the classroom, made for phones, tablets and computers.
     </p>
   </div>
 
-  <div class="page">
+  <div class="page page--wide">
     <div class="grid">
       <component
         :is="game.available ? RouterLink : 'div'"
@@ -59,14 +74,51 @@ const games: GameCard[] = [
 
 <style scoped>
 .hero {
-  background: linear-gradient(160deg, var(--violet-800), var(--violet-600));
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--violet-900), var(--violet-800) 45%, var(--violet-600));
+  background-size: 200% 200%;
+  animation: hero-pan 14s ease-in-out infinite alternate;
   color: #fff;
   text-align: center;
-  padding: 44px 20px 52px;
+  padding: clamp(44px, 8vw, 88px) 20px clamp(56px, 9vw, 104px);
+}
+
+@keyframes hero-pan {
+  from {
+    background-position: 0% 0%;
+  }
+  to {
+    background-position: 100% 100%;
+  }
+}
+
+.hero-deco {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.deco {
+  position: absolute;
+  opacity: 0.3;
+  filter: saturate(0.9);
+  animation: float-y 6s ease-in-out infinite alternate;
+}
+
+@media (max-width: 600px) {
+  .deco:nth-child(n + 5) {
+    display: none;
+  }
+}
+
+.hero h1,
+.hero p {
+  position: relative;
 }
 
 .hero h1 {
-  font-size: clamp(2rem, 6vw, 3rem);
+  font-size: clamp(2rem, 6vw, 3.4rem);
   margin-bottom: 8px;
 }
 
@@ -74,7 +126,7 @@ const games: GameCard[] = [
   margin: 0 auto;
   max-width: 34em;
   opacity: 0.9;
-  font-size: 1.05rem;
+  font-size: clamp(1rem, 2vw, 1.2rem);
 }
 
 .page {
@@ -83,8 +135,8 @@ const games: GameCard[] = [
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 16px;
 }
 
 .game-card {
@@ -101,8 +153,12 @@ const games: GameCard[] = [
 }
 
 a.game-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-m);
+  transform: translateY(-5px) scale(1.015);
+  box-shadow: var(--shadow-l);
+}
+
+a.game-card:hover .emoji {
+  animation: wiggle 450ms var(--ease-pop);
 }
 
 .game-card h2 {
@@ -112,6 +168,7 @@ a.game-card:hover {
 
 .emoji {
   font-size: 2rem;
+  display: inline-block;
 }
 
 .status {
@@ -127,6 +184,18 @@ a.game-card:hover {
 .status.live {
   background: #e3f4e8;
   color: var(--success);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status.live::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--success);
+  animation: pulse-soft 1.8s ease-in-out infinite;
 }
 
 .status.soon {

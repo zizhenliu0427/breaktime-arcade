@@ -15,6 +15,10 @@ import { RouterLink, RouterView } from 'vue-router';
   <main>
     <RouterView />
   </main>
+  <footer class="footer">
+    <span class="footer-brand">🎉 Breaktime Arcade</span>
+    <span class="footer-note">Quick party games for the classroom · More games coming soon</span>
+  </footer>
 </template>
 
 <style scoped>
@@ -25,6 +29,16 @@ import { RouterLink, RouterView } from 'vue-router';
   padding: 10px 16px;
   background: var(--violet-800);
   color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  box-shadow: var(--shadow-s);
+}
+
+@media (min-width: 900px) {
+  .topbar {
+    padding: 12px 28px;
+  }
 }
 
 .brand {
@@ -40,6 +54,11 @@ import { RouterLink, RouterView } from 'vue-router';
 
 .brand-mark {
   font-size: 1.2rem;
+  display: inline-block;
+}
+
+.brand:hover .brand-mark {
+  animation: wiggle 450ms var(--ease-pop);
 }
 
 .lang {
@@ -59,5 +78,35 @@ import { RouterLink, RouterView } from 'vue-router';
 .lang-caret {
   opacity: 0.75;
   font-size: 0.7rem;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  padding: 22px 16px 26px;
+  background: linear-gradient(160deg, var(--violet-900), var(--violet-800));
+  color: #fff;
+}
+
+.footer-brand {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.footer-note {
+  font-size: 0.82rem;
+  opacity: 0.75;
+}
+
+@media (min-width: 700px) {
+  .footer {
+    flex-direction: row;
+    justify-content: space-between;
+    text-align: left;
+    padding: 20px 28px;
+  }
 }
 </style>
