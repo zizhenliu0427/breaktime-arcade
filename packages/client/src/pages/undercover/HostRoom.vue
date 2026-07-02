@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import QRCode from 'qrcode';
 import type { LocalPhase, PublicGroupState, Role } from '@arcade/shared';
+import { wordPacks } from '@arcade/shared';
 import BaseButton from '../../components/ui/BaseButton.vue';
 import { useOnlineHostStore } from '../../stores/onlineHost';
 
@@ -11,6 +12,7 @@ const host = useOnlineHostStore();
 
 const qrDataUrl = ref('');
 const answersRevealed = ref(false);
+const settingsOpen = ref(false);
 const now = ref(Date.now());
 let tick: ReturnType<typeof setInterval> | null = null;
 
@@ -159,8 +161,59 @@ async function endRoom() {
           <BaseButton variant="ghost" @click="toggleReveal">
             {{ answersRevealed ? '🙈 Hide answers' : '👁 Reveal answers' }}
           </BaseButton>
+          <BaseButton variant="ghost" @click="settingsOpen = !settingsOpen">
+            {{ settingsOpen ? '✕ Close settings' : '⚙️ Settings' }}
+          </BaseButton>
           <BaseButton variant="danger" @click="endRoom">End session</BaseButton>
         </div>
+      </div>
+
+      <!-- Settings panel (toggleable) -->
+      <div v-if="settingsOpen" class="card settings rise">
+        <h2>⚙️ Settings <span class="settings-note">(changes apply on next game start)</span></h2>
+        <div class="settings-row">
+          <label class="toggle">
+            <input
+              type="checkbox"
+              :checked="host.room.config.includeMrWhite"
+              @change="host.action({ type: 'updateConfig', config: { includeMrWhite: ($event.target as HTMLInputElement).checked } })"
+            />
+            <span>Include Mr White</span>
+          </label>
+          <label class="sfield">
+            <span>Word pack</span>
+            <select
+              :value="host.room.config.packId"
+              @change="host.action({ type: 'updateConfig', config: { packId: ($event.target as HTMLSelectElement).value } })"
+            >
+              <option v-for="pack in wordPacks" :key="pack.id" :value="pack.id">{{ pack.name }}</option>
+            </select>
+          </label>
+          <label class="sfield">
+            <span>Discussion</span>
+            <select
+              :value="host.room.config.discussSeconds"
+              @change="host.action({ type: 'updateConfig', config: { discussSeconds: Number(($event.target as HTMLSelectElement).value) } })"
+            >
+              <option v-for="s in [30, 45, 60, 90, 120]" :key="s" :value="s">{{ s }}s</option>
+            </select>
+          </label>
+          <label class="sfield">
+            <span>Voting</span>
+            <select
+              :value="host.room.config.voteSeconds"
+              @change="host.action({ type: 'updateConfig', config: { voteSeconds: Number(($event.target as HTMLSelectElement).value) } })"
+            >
+              <option v-for="s in [15, 20, 30, 45, 60]" :key="s" :value="s">{{ s }}s</option>
+            </select>
+          </label>
+        </div>
+        <p class="settings-status">
+          Mr White: {{ host.room?.config.includeMrWhite ? '✅ On' : '❌ Off' }} ·
+          Pack: {{ wordPacks.find(p => p.id === host.room?.config.packId)?.name ?? host.room?.config.packId }} ·
+          Discuss: {{ host.room?.config.discussSeconds }}s ·
+          Vote: {{ host.room?.config.voteSeconds }}s
+        </p>
       </div>
 
       <p v-if="host.error" class="error" role="alert">{{ host.error }}</p>
@@ -555,6 +608,76 @@ async function endRoom() {
 .error {
   color: var(--danger);
   font-weight: 700;
+}
+
+/* ── Settings panel ───────────────────── */
+.settings {
+  margin-bottom: 16px;
+}
+
+.settings h2 {
+  font-size: 1.05rem;
+  margin-bottom: 12px;
+}
+
+.settings-note {
+  font-weight: 500;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.settings-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.92rem;
+}
+
+.toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--violet-600);
+  cursor: pointer;
+}
+
+.sfield {
+  display: grid;
+  gap: 3px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  min-width: 120px;
+}
+
+.sfield select {
+  border: 2px solid var(--line);
+  border-radius: var(--radius-s);
+  padding: 6px 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.sfield select:focus {
+  outline: none;
+  border-color: var(--violet-600);
+}
+
+.settings-status {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink-soft);
 }
 
 .closed {

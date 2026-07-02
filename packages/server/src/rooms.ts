@@ -147,7 +147,7 @@ export class RoomManager {
       mode: merged.mode === 'groups' ? 'groups' : 'team',
       packId: getWordPack(merged.packId) ? merged.packId : DEFAULT_ROOM_CONFIG.packId,
       undercoverCount: 1,
-      includeMrWhite: false,
+      includeMrWhite: !!merged.includeMrWhite,
       discussSeconds: clamp(merged.discussSeconds, 10, 300),
       voteSeconds: clamp(merged.voteSeconds, 10, 120),
     };
@@ -159,6 +159,22 @@ export class RoomManager {
       const v = (src[i] ?? `Group ${i + 1}`).trim().slice(0, 20);
       return v || `Group ${i + 1}`;
     });
+  }
+
+  /**
+   * Update room config on the fly. Only "safe" fields are applied — the ones
+   * that don't invalidate the group/player structure. Changes take effect on
+   * the *next* game start (restartGame / startGame); in-progress games keep
+   * their current words and roles.
+   */
+  updateConfig(room: Room, patch: Partial<RoomConfig>): void {
+    const safe: Partial<RoomConfig> = {};
+    if (patch.includeMrWhite !== undefined) safe.includeMrWhite = !!patch.includeMrWhite;
+    if (patch.discussSeconds !== undefined) safe.discussSeconds = patch.discussSeconds;
+    if (patch.voteSeconds !== undefined) safe.voteSeconds = patch.voteSeconds;
+    if (patch.packId !== undefined) safe.packId = patch.packId;
+    if (patch.sessionName !== undefined) safe.sessionName = patch.sessionName;
+    room.config = this.sanitiseConfig({ ...room.config, ...safe });
   }
 
   /* ── Players ───────────────────────────────────────────────── */

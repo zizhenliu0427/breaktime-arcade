@@ -202,4 +202,5 @@ export type HostAction =
   | { type: 'skipPhase'; groupId?: string }
   | { type: 'nextRound'; groupId?: string }
   | { type: 'restartGame'; groupId?: string }
+  | { type: 'updateConfig'; config: Partial<RoomConfig> }
   | { type: 'endRoom' };

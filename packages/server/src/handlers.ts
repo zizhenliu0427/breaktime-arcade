@@ -94,6 +94,10 @@ export function attachHandlers(io: IO): RoomManager {
         case 'restartGame':
           changed = manager.restartGame(room, action.groupId ?? null);
           break;
+        case 'updateConfig':
+          manager.updateConfig(room, action.config);
+          changed = true;
+          break;
         case 'endRoom':
           io.to(room.code).emit('room:closed', { reason: 'The host ended the session.' });
           manager.closeRoom(room);

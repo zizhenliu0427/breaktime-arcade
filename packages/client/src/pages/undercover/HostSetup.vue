@@ -85,7 +85,16 @@ async function create() {
           </select>
         </label>
       </div>
-      <p class="hint">1 undercover team · Mr White off. Tip: set “Players per team = 1” to play every player for themselves.</p>
+      <label class="toggle">
+        <input v-model="config.includeMrWhite" type="checkbox" />
+        <span>Include Mr White</span>
+        <span class="toggle-hint">One player gets no word at all and must bluff their way through.</span>
+      </label>
+      <p class="hint">
+        1 undercover {{ config.mode === 'team' ? 'team' : 'player' }} ·
+        Mr White {{ config.includeMrWhite ? 'on' : 'off' }}.
+        {{ config.mode === 'team' ? 'Tip: set "Players per team = 1" to play every player for themselves.' : '' }}
+      </p>
     </div>
 
     <p v-if="host.error" class="error" role="alert">{{ host.error }}</p>
@@ -145,6 +154,32 @@ async function create() {
 .field select:focus {
   outline: none;
   border-color: var(--violet-600);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--violet-600);
+  cursor: pointer;
+}
+
+.toggle-hint {
+  flex-basis: 100%;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  padding-left: 26px;
 }
 
 .hint {
