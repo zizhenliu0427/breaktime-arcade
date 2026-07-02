@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import BaseButton from '../ui/BaseButton.vue';
 import { usePassPlayStore } from '../../stores/passPlay';
 
+const { t } = useI18n();
 const store = usePassPlayStore();
 const isRunoff = computed(() => store.phase === 'runoff');
 const speakerIndex = computed(() => store.game?.speakerIndex ?? 0);
@@ -11,13 +13,12 @@ const speakerIndex = computed(() => store.game?.speakerIndex ?? 0);
 <template>
   <div class="clue pop">
     <div v-if="isRunoff" class="runoff-banner" role="status">
-      ⚖️ It's a tie! The tied players each give one more clue.
+      {{ t('passPlay.runoffBanner') }}
     </div>
 
-    <h2>{{ isRunoff ? 'Tie-break clues' : `Round ${store.game?.round} · Clues` }}</h2>
+    <h2>{{ isRunoff ? t('game.runoffTitle') : t('game.cluesTitle', { n: store.game?.round }) }}</h2>
     <p class="sub">
-      Say one short clue about your word — out loud, face to face. Don't say the word, spell it or
-      give its first letter.
+      {{ t('passPlay.clueInstruction') }}
     </p>
 
     <TransitionGroup name="speaker" tag="ol" class="order">
@@ -29,7 +30,7 @@ const speakerIndex = computed(() => store.game?.speakerIndex ?? 0);
       >
         <span class="num">{{ i + 1 }}</span>
         <span class="name">{{ player.name }}</span>
-        <span v-if="i === speakerIndex" class="now">Speaking now</span>
+        <span v-if="i === speakerIndex" class="now">{{ t('passPlay.speakingNow') }}</span>
         <span v-else-if="i < speakerIndex" class="tick" aria-label="done">✓</span>
       </li>
     </TransitionGroup>
@@ -37,10 +38,10 @@ const speakerIndex = computed(() => store.game?.speakerIndex ?? 0);
     <BaseButton variant="accent" size="lg" block @click="store.advanceSpeaker()">
       {{
         speakerIndex + 1 < store.clueOrder.length
-          ? `Done — next is ${store.clueOrder[speakerIndex + 1]?.name}`
+          ? t('passPlay.doneNextSpeaker', { name: store.clueOrder[speakerIndex + 1]?.name })
           : isRunoff
-            ? 'All clues given — revote'
-            : 'All clues given — discuss'
+            ? t('passPlay.allCluesRevote')
+            : t('passPlay.allCluesDiscuss')
       }}
     </BaseButton>
   </div>

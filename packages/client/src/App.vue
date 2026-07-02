@@ -1,23 +1,27 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+import { toggleLocale } from './i18n';
+
+const { t } = useI18n();
 </script>
 
 <template>
   <header class="topbar">
     <RouterLink to="/" class="brand">
       <span class="brand-mark">🎉</span>
-      <span class="brand-name">Breaktime Arcade</span>
+      <span class="brand-name">{{ t('nav.brand') }}</span>
     </RouterLink>
-    <button class="lang" type="button" title="More languages coming later">
-      EN <span class="lang-caret">▾</span>
+    <button class="lang" type="button" @click="toggleLocale">
+      {{ t('nav.langSwitch') }}
     </button>
   </header>
   <main>
     <RouterView />
   </main>
   <footer class="footer">
-    <span class="footer-brand">🎉 Breaktime Arcade</span>
-    <span class="footer-note">Quick party games for the classroom · More games coming soon</span>
+    <span class="footer-brand">{{ t('footer.brand') }}</span>
+    <span class="footer-note">{{ t('footer.note') }}</span>
   </footer>
 </template>
 

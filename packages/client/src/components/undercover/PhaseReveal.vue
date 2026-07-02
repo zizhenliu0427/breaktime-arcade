@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import BaseButton from '../ui/BaseButton.vue';
 import HandoverMask from './HandoverMask.vue';
 import { usePassPlayStore } from '../../stores/passPlay';
 
+const { t } = useI18n();
 const store = usePassPlayStore();
 const holding = ref(false);
 const hasPeeked = ref(false);
@@ -28,12 +30,12 @@ function memorised() {
   <HandoverMask
     v-if="store.masked && store.revealPlayer"
     :player-name="store.revealPlayer.name"
-    task="see your secret word"
+    :task="t('passPlay.taskSeeSecretWord')"
     @ready="store.unmask()"
   />
 
   <div v-else-if="store.revealPlayer" class="reveal pop">
-    <p class="who">{{ store.revealPlayer.name }}, this word is for your eyes only.</p>
+    <p class="who">{{ t('passPlay.personalWordPrompt', { name: store.revealPlayer.name }) }}</p>
 
     <button
       class="word-card"
@@ -46,22 +48,22 @@ function memorised() {
       @contextmenu.prevent
     >
       <span v-if="holding" class="word pop">
-        {{ store.revealPlayer.word ?? 'You have NO word — you are Mr White. Blend in!' }}
+        {{ store.revealPlayer.word ?? t('game.mrWhiteNoWord') }}
       </span>
       <span v-else class="prompt">
         <span class="eye" aria-hidden="true">👁️</span>
-        Press and hold to reveal
+        {{ t('game.pressToReveal') }}
       </span>
     </button>
 
-    <p class="hint">Your word hides again the moment you let go.</p>
+    <p class="hint">{{ t('game.hintHold') }}</p>
 
     <BaseButton variant="primary" size="lg" block :disabled="!hasPeeked" @click="memorised">
-      I've memorised my word
+      {{ t('game.ready') }}
     </BaseButton>
 
     <div class="progress">
-      Player {{ (store.game?.revealIndex ?? 0) + 1 }} of {{ store.players.length }}
+      {{ t('passPlay.playerCountProgress', { i: (store.game?.revealIndex ?? 0) + 1, total: store.players.length }) }}
     </div>
   </div>
 </template>

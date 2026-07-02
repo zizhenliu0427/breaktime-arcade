@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import BaseButton from '../components/ui/BaseButton.vue';
 import TimerRing from '../components/ui/TimerRing.vue';
 import { useOnlinePlayerStore } from '../stores/onlinePlayer';
 import { useCountdown } from '../lib/useCountdown';
 
+const { t } = useI18n();
 const player = useOnlinePlayerStore();
 const router = useRouter();
 
@@ -31,19 +33,19 @@ const aliveLabel = computed(() => {
   if (!player.room) return '';
   if (player.mode === 'team') {
     const n = Object.values(player.room.groups).filter((g) => g.alive).length;
-    return `${n} teams in`;
+    return t('game.teamsIn', { n });
   }
-  return `${player.groupMembers.filter((p) => p.alive).length} in`;
+  return t('game.playersIn', { n: player.groupMembers.filter((p) => p.alive).length });
 });
 const revealReady = computed(() => player.myGroup?.readyMemberIds.length ?? 0);
 const revealTotal = computed(() => player.myGroup?.playerCount ?? 0);
-const voteLabel = computed(() => (player.mode === 'team' ? 'teams' : 'players'));
+const voteLabel = computed(() => (player.mode === 'team' ? t('game.vLabelTeams') : t('game.vLabelPlayers')));
 
 function roleLabel(role: string): string {
   if (player.mode === 'team') {
-    return role === 'undercover' ? 'the undercover team' : role === 'mrWhite' ? 'Mr White' : 'a civilian team';
+    return role === 'undercover' ? t('game.roleUndercoverTeam') : role === 'mrWhite' ? t('game.roleMrWhiteTeam') : t('game.roleCivilianTeam');
   }
-  return role === 'undercover' ? 'the Undercover' : role === 'mrWhite' ? 'Mr White' : 'a Civilian';
+  return role === 'undercover' ? t('game.roleUndercoverPlayer') : role === 'mrWhite' ? t('game.roleMrWhitePlayer') : t('game.roleCivilianPlayer');
 }
 
 // Hold-to-reveal card (the word hides the instant you let go).
@@ -66,7 +68,7 @@ function pickGroup(id: string | null) {
 function confirmVote() {
   if (!choice.value) return;
   if (isSelfVote.value) {
-    if (!window.confirm('You are voting for yourself! Are you sure?')) return;
+    if (!window.confirm(t('game.selfVoteWarning'))) return;
   }
   const target = choice.value;
   choice.value = null;
@@ -74,7 +76,7 @@ function confirmVote() {
 }
 
 function leave() {
-  if (window.confirm("Leave this room? You'll need the room code to rejoin.")) {
+  if (window.confirm(t('game.confirmLeave'))) {
     player.leave();
     router.push('/');
   }
@@ -98,29 +100,29 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
 <template>
   <div class="page game">
     <div v-if="player.closedReason" class="stage closed rise">
-      <h2>Session ended</h2>
+      <h2>{{ t('host.room.sessionEnded') }}</h2>
       <p>{{ player.closedReason }}</p>
-      <BaseButton variant="primary" @click="router.push('/')">Back to home</BaseButton>
+      <BaseButton variant="primary" @click="router.push('/')">{{ t('game.backToMenu') }}</BaseButton>
     </div>
 
     <template v-else>
       <div v-if="player.myGroup" class="statusbar">
-        <span class="pill">Team {{ player.myGroup.name }}</span>
-        <span v-if="player.room?.started && player.phase !== 'reveal'" class="pill">Round {{ player.round }}</span>
+        <span class="pill">{{ t('game.teamPill', { name: player.myGroup.name }) }}</span>
+        <span v-if="player.room?.started && player.phase !== 'reveal'" class="pill">{{ t('host.room.roundNum', { n: player.round }) }}</span>
         <span class="alive">{{ aliveLabel }}</span>
-        <button class="quit" type="button" @click="leave">Leave</button>
+        <button class="quit" type="button" @click="leave">{{ t('player.leave') }}</button>
       </div>
 
       <p v-if="player.error" class="error" role="alert">{{ player.error }}</p>
 
       <Transition name="phase" mode="out-in">
         <!-- connecting / syncing -->
-        <section v-if="!player.me" key="loading" class="loading">Connecting to your room…</section>
+        <section v-if="!player.me" key="loading" class="loading">{{ t('game.connecting') }}</section>
 
         <!-- lobby: pick a team -->
         <section v-else-if="player.me.groupId === null" key="lobby" class="stage lobby pop">
-          <h2>Welcome, {{ player.name }}!</h2>
-          <p class="sub">Pick your team, or let us balance the teams for you.</p>
+          <h2>{{ t('game.welcomeName', { name: player.name }) }}</h2>
+          <p class="sub">{{ t('game.pickTeam') }}</p>
           <div class="group-grid">
             <button
               v-for="g in groups"
@@ -133,16 +135,16 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
             >
               <span class="gp-name">{{ g.name }}</span>
               <span class="gp-count">{{ g.playerCount }}/{{ capacity }}</span>
-              <span v-if="g.playerCount >= capacity" class="gp-full">Full</span>
+              <span v-if="g.playerCount >= capacity" class="gp-full">{{ t('game.full') }}</span>
             </button>
           </div>
-          <BaseButton variant="ghost" block @click="pickGroup(null)">Assign me to a team</BaseButton>
+          <BaseButton variant="ghost" block @click="pickGroup(null)">{{ t('game.assignTeam') }}</BaseButton>
         </section>
 
         <!-- reveal: hold to see the word (team: shared; groups: your own) -->
         <section v-else-if="player.phase === 'reveal'" key="reveal" class="stage reveal pop">
           <template v-if="player.secret">
-            <p class="who">Your secret word — for your eyes only.</p>
+            <p class="who">{{ t('game.secretWordOnly') }}</p>
             <button
               class="word-card"
               :class="{ holding }"
@@ -154,14 +156,14 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
               @contextmenu.prevent
             >
               <span v-if="holding" class="word pop">
-                {{ player.secret.word ?? 'You have NO word — you are Mr White. Blend in!' }}
+                {{ player.secret.word ?? t('game.mrWhiteNoWord') }}
               </span>
               <span v-else class="prompt">
                 <span class="eye" aria-hidden="true">👁️</span>
-                Press and hold to reveal
+                {{ t('game.pressToReveal') }}
               </span>
             </button>
-            <p class="hint">Your word hides again the moment you let go.</p>
+            <p class="hint">{{ t('game.hintHold') }}</p>
             <BaseButton
               variant="primary"
               size="lg"
@@ -169,25 +171,25 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
               :disabled="player.iHaveMemorised"
               @click="player.ready()"
             >
-              {{ player.iHaveMemorised ? 'Waiting for everyone…' : "I've memorised my word" }}
+              {{ player.iHaveMemorised ? t('game.waitingForEveryone') : t('game.ready') }}
             </BaseButton>
-            <p class="progress">🔐 {{ revealReady }}/{{ revealTotal }} ready in your team</p>
+            <p class="progress">{{ t('game.readyInTeam', { ready: revealReady, total: revealTotal }) }}</p>
           </template>
-          <p v-else class="loading">Dealing words…</p>
+          <p v-else class="loading">{{ t('game.dealingWords') }}</p>
         </section>
 
         <!-- clue / runoff -->
         <section v-else-if="player.phase === 'clue' || player.phase === 'runoff'" :key="player.phase" class="stage clue pop">
           <div v-if="player.isRunoffVote" class="banner" role="status">
-            ⚖️ It's a tie! The tied {{ voteLabel }} give one more clue each.
+            {{ t('game.tieBanner', { vLabel: voteLabel }) }}
           </div>
           <h2>
-            {{ player.isRunoffVote ? 'Tie-break clues' : `Round ${player.round} · Clues` }}
+            {{ player.isRunoffVote ? t('game.runoffTitle') : t('game.cluesTitle', { n: player.round }) }}
           </h2>
           <p v-if="player.isMyTurn" class="sub">
-            🎤 It's your turn. Give one short clue — don't say the word, spell it or give its first letter.
+            {{ t('game.myTurnClue') }}
           </p>
-          <p v-else class="sub">Take turns giving one short clue about the word.</p>
+          <p v-else class="sub">{{ t('game.otherTurnClue') }}</p>
 
           <ol class="order">
             <li
@@ -202,11 +204,11 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
               }"
             >
               <span class="num">{{ i + 1 }}</span>
-              <span class="name">{{ s.name }}<span v-if="s.id === player.playerId"> (you)</span></span>
+              <span class="name">{{ s.name }}<span v-if="s.id === player.playerId"> {{ t('game.you') }}</span></span>
               <span
                 v-if="(player.mode === 'team' ? player.room?.currentSpeakerGroupId : player.myGroup?.currentSpeakerId) === s.id"
                 class="now"
-              >{{ player.isMyTurn ? 'Your turn' : 'Speaking' }}</span>
+              >{{ player.isMyTurn ? t('game.yourTurnBtn') : t('game.speaking') }}</span>
               <span
                 v-else-if="i < (player.mode === 'team' ? player.room?.speakerIndex ?? 0 : player.myGroup?.speakerIndex ?? 0)"
                 class="tick"
@@ -216,15 +218,15 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
           </ol>
 
           <BaseButton v-if="player.isMyTurn" variant="accent" size="lg" block @click="player.clueDone()">
-            I'm done — next
+            {{ t('game.doneNext') }}
           </BaseButton>
-          <p v-else class="waiting">Wait for your turn.</p>
+          <p v-else class="waiting">{{ t('game.waitYourTurn') }}</p>
         </section>
 
         <!-- discuss -->
         <section v-else-if="player.phase === 'discuss'" key="discuss" class="stage discuss pop">
-          <h2>💬 Discuss</h2>
-          <p class="sub">Who gave a suspicious clue? Talk it over — voting opens when the timer ends.</p>
+          <h2>{{ t('game.discussTitle') }}</h2>
+          <p class="sub">{{ t('game.discussDesc') }}</p>
           <div class="ring">
             <TimerRing :remaining="remaining" :total="ringTotal" :size="150" />
           </div>
@@ -233,44 +235,44 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
         <!-- vote -->
         <section v-else-if="player.phase === 'vote'" key="vote" class="stage vote pop">
           <div v-if="player.isRunoffVote" class="banner" role="status">
-            Tie-break revote — choose between the tied {{ voteLabel }} only.
+            {{ t('game.tieBreakRevote', { vLabel: voteLabel }) }}
           </div>
-          <h2>🗳️ Cast your vote</h2>
+          <h2>{{ t('game.castYourVote') }}</h2>
           <template v-if="player.canIVote">
             <p class="sub">
-              Who do you think is the undercover? {{ player.mode === 'team' ? 'The first teammate to vote locks your team’s choice.' : 'Your vote stays secret.' }}
+              {{ player.mode === 'team' ? t('game.whoIsUndercoverTeam') : t('game.whoIsUndercoverPlayer') }}
             </p>
             <div class="targets" role="radiogroup" aria-label="Vote">
               <button
-                v-for="t in player.voteTargets"
-                :key="t.id"
+                v-for="target in player.voteTargets"
+                :key="target.id"
                 type="button"
                 class="target"
                 role="radio"
-                :aria-checked="choice === t.id"
-                :class="{ chosen: choice === t.id, 'self-target': t.isSelf }"
-                @click="choice = choice === t.id ? null : t.id"
+                :aria-checked="choice === target.id"
+                :class="{ chosen: choice === target.id, 'self-target': target.isSelf }"
+                @click="choice = choice === target.id ? null : target.id"
               >
-                <span class="target-name">{{ t.name }}<span v-if="t.isSelf" class="you-tag"> (you)</span></span>
-                <span v-if="choice === t.id" class="check pop">✓</span>
+                <span class="target-name">{{ target.name }}<span v-if="target.isSelf" class="you-tag"> {{ t('game.you') }}</span></span>
+                <span v-if="choice === target.id" class="check pop">✓</span>
               </button>
             </div>
             <div v-if="isSelfVote" class="self-warn" role="alert">
-              ⚠️ You are about to vote for yourself. This is allowed but rarely a good idea!
+              {{ t('game.selfWarn') }}
             </div>
             <BaseButton variant="accent" size="lg" block :disabled="!choice" @click="confirmVote">
-              {{ isSelfVote ? '⚠️ Confirm self-vote' : 'Confirm vote' }}
+              {{ isSelfVote ? t('game.confirmSelfVote') : t('game.confirmVote') }}
             </BaseButton>
           </template>
           <div v-else class="voted">
-            <p class="progress">🗳 {{ player.votesIn }}/{{ player.votersTotal }} {{ voteLabel }} voted</p>
+            <p class="progress">🗳 {{ t('host.room.votedPlayers', { voted: player.votesIn, total: player.votersTotal }) }}</p>
             <p class="waiting">
               {{
                 player.myVote
-                  ? `Voted for ${player.nameOf(player.myVote)}.`
+                  ? t('game.votedFor', { name: player.nameOf(player.myVote) })
                   : player.myAlive
-                    ? 'Waiting for the others…'
-                    : "You're out — watching the vote."
+                    ? t('game.waitingForEveryone')
+                    : t('game.watchingVote')
               }}
             </p>
           </div>
@@ -285,21 +287,21 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
                 <span class="face back">{{ player.eliminated.role === 'civilian' ? '😇' : '🕵️' }}</span>
               </div>
             </div>
-            <h2>{{ player.nameOf(player.eliminated.id) }} received the most votes.</h2>
+            <h2>{{ t('game.eliminatedTitle', { name: player.nameOf(player.eliminated.id) }) }}</h2>
             <p class="role-line">
-              {{ player.nameOf(player.eliminated.id) }} was <strong>{{ roleLabel(player.eliminated.role) }}</strong>.
+              {{ t('game.eliminatedWas', { name: player.nameOf(player.eliminated.id), role: roleLabel(player.eliminated.role) }) }}
             </p>
-            <p class="note">Their word stays hidden until the game ends.</p>
+            <p class="note">{{ t('game.wordStaysHidden') }}</p>
           </template>
           <template v-else>
             <div class="tie" aria-hidden="true">🤝</div>
-            <h2>Still tied!</h2>
-            <p class="role-line">Nobody is eliminated this round.</p>
+            <h2>{{ t('game.stillTied') }}</h2>
+            <p class="role-line">{{ t('game.nobodyEliminated') }}</p>
           </template>
           <BaseButton v-if="player.myAlive" variant="accent" size="lg" block @click="player.continueRound()">
-            Next round
+            {{ t('game.nextRound') }}
           </BaseButton>
-          <p v-else class="note">Waiting to start the next round…</p>
+          <p v-else class="note">{{ t('game.waitingNextRound') }}</p>
         </section>
 
         <!-- ended -->
@@ -309,26 +311,25 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
           </div>
           <div class="result">
             <div class="trophy" aria-hidden="true">{{ player.civiliansWin ? '😇' : '🕵️' }}</div>
-            <h2>{{ player.civiliansWin ? 'The civilians win!' : 'The undercover wins!' }}</h2>
+            <h2>{{ player.civiliansWin ? t('game.theCiviliansWin') : (player.mode === 'team' ? t('game.theUndercoverTeamWins') : t('game.theUndercoverWins')) }}</h2>
             <p v-if="player.undercoverId" class="reveal-line">
-              The undercover {{ player.mode === 'team' ? 'team' : 'player' }} was
-              <strong>{{ player.nameOf(player.undercoverId) }}</strong>.
+              {{ t('game.undercoverWas', { label: player.mode === 'team' ? t('game.vLabelTeams') : t('game.vLabelPlayers'), name: player.nameOf(player.undercoverId) }) }}
             </p>
             <div class="words">
               <div class="word-box civ">
-                <span class="label">Civilian word</span>
+                <span class="label">{{ t('game.civilianWord') }}</span>
                 <span class="value">{{ player.civilianWord ?? '—' }}</span>
               </div>
               <div class="word-box uc">
-                <span class="label">Undercover word</span>
+                <span class="label">{{ t('game.undercoverWord') }}</span>
                 <span class="value">{{ player.undercoverWord ?? '—' }}</span>
               </div>
             </div>
-            <BaseButton variant="primary" block @click="leave">Leave room</BaseButton>
+            <BaseButton variant="primary" block @click="leave">{{ t('game.leaveRoom') }}</BaseButton>
           </div>
         </section>
 
-        <section v-else key="idle" class="loading">Waiting for the host to start the game…</section>
+        <section v-else key="idle" class="loading">{{ t('game.waitingForHost') }}</section>
       </Transition>
     </template>
   </div>

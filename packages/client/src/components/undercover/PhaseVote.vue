@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import BaseButton from '../ui/BaseButton.vue';
 import HandoverMask from './HandoverMask.vue';
 import { usePassPlayStore } from '../../stores/passPlay';
 
+const { t } = useI18n();
 const store = usePassPlayStore();
 const choice = ref<string | null>(null);
 
@@ -15,7 +17,7 @@ const isSelfVote = computed(() => {
 function confirm() {
   if (!choice.value) return;
   if (isSelfVote.value) {
-    if (!window.confirm('You are voting for yourself! Are you sure?')) return;
+    if (!window.confirm(t('game.selfVoteWarning'))) return;
   }
   const target = choice.value;
   choice.value = null;
@@ -27,17 +29,17 @@ function confirm() {
   <HandoverMask
     v-if="store.masked && store.currentVoter"
     :player-name="store.currentVoter.name"
-    task="cast your secret vote"
+    :task="t('passPlay.taskVote')"
     @ready="store.unmask()"
   />
 
   <div v-else-if="store.currentVoter" class="vote pop">
     <div v-if="store.game?.isRunoffVote" class="runoff-note" role="status">
-      Tie-break revote — choose between the tied players only.
+      {{ t('passPlay.tieBreakRevoteHint') }}
     </div>
 
-    <h2>🗳️ {{ store.currentVoter.name }}, cast your vote</h2>
-    <p class="sub">Who do you think is the Undercover? Your vote stays secret.</p>
+    <h2>🗳️ {{ t('passPlay.personalVotePrompt', { name: store.currentVoter.name }) }}</h2>
+    <p class="sub">{{ t('game.whoIsUndercoverPlayer') }}</p>
 
     <div class="targets" role="radiogroup" aria-label="Vote for a player">
       <button
@@ -50,21 +52,21 @@ function confirm() {
         :class="{ chosen: choice === target.id, 'self-target': store.currentVoter?.id === target.id }"
         @click="choice = choice === target.id ? null : target.id"
       >
-        <span class="target-name">{{ target.name }}<span v-if="store.currentVoter?.id === target.id" class="you-tag"> (you)</span></span>
+        <span class="target-name">{{ target.name }}<span v-if="store.currentVoter?.id === target.id" class="you-tag"> {{ t('game.you') }}</span></span>
         <span v-if="choice === target.id" class="check pop">✓</span>
       </button>
     </div>
 
     <div v-if="isSelfVote" class="self-warn" role="alert">
-      ⚠️ You are about to vote for yourself. This is allowed but rarely a good idea!
+      {{ t('game.selfWarn') }}
     </div>
 
     <BaseButton variant="accent" size="lg" block :disabled="!choice" @click="confirm">
-      {{ isSelfVote ? '⚠️ Confirm self-vote' : 'Confirm vote' }}
+      {{ isSelfVote ? t('game.confirmSelfVote') : t('game.confirmVote') }}
     </BaseButton>
 
     <div class="progress">
-      Vote {{ store.voterIndex + 1 }} of {{ store.voters.length }}
+      {{ t('passPlay.voteProgress', { i: store.voterIndex + 1, total: store.voters.length }) }}
     </div>
   </div>
 </template>

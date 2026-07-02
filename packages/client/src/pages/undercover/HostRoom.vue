@@ -1,11 +1,13 @@
-<script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import QRCode from 'qrcode';
+import { useI18n } from 'vue-i18n';
 import type { LocalPhase, PublicGroupState, Role } from '@arcade/shared';
 import { wordPacks } from '@arcade/shared';
 import BaseButton from '../../components/ui/BaseButton.vue';
 import { useOnlineHostStore } from '../../stores/onlineHost';
+
+const { t } = useI18n();
 
 const router = useRouter();
 const host = useOnlineHostStore();
@@ -37,17 +39,18 @@ watch(
   { immediate: true },
 );
 
-const phaseLabels: Record<LocalPhase, string> = {
-  reveal: 'Memorising words',
-  clue: 'Giving clues',
-  discuss: 'Discussing',
-  vote: 'Voting',
-  runoff: 'Tie-break clues',
-  elimination: 'Round result',
-  ended: 'Finished',
-};
 function phaseLabel(phase: LocalPhase | null): string {
-  return phase ? phaseLabels[phase] : 'Waiting';
+  if (!phase) return t('host.room.groupWaiting');
+  const map: Record<LocalPhase, string> = {
+    reveal: t('host.room.phaseReveal'),
+    clue: t('host.room.phaseClue'),
+    discuss: t('host.room.phaseDiscuss'),
+    vote: t('host.room.phaseVote'),
+    runoff: t('host.room.phaseRunoff'),
+    elimination: t('host.room.phaseElimination'),
+    ended: t('host.room.phaseEnded'),
+  };
+  return map[phase] || phase;
 }
 function secondsLeft(ms: number | null): number | null {
   if (ms == null) return null;
@@ -57,13 +60,14 @@ function memberName(id: string | null | undefined): string {
   return (id && host.playerById(id)?.name) || '—';
 }
 function roleLabel(role: Role | undefined): string {
-  if (!role) return 'civilian';
-  return role === 'undercover' ? 'undercover' : role === 'mrWhite' ? 'Mr White' : 'civilian';
+  if (role === 'undercover') return t('host.room.roleUndercover');
+  if (role === 'mrWhite') return t('host.room.roleMrWhite');
+  return t('host.room.roleCivilian');
 }
 function winnerLabel(g: PublicGroupState): string {
-  if (g.winner === 'civilians') return '🏆 Civilians win';
-  if (g.winner === 'undercover') return '🕵️ Undercover wins';
-  if (g.winner === 'mrWhite') return '🃏 Mr White wins';
+  if (g.winner === 'civilians') return t('host.room.winCivilians');
+  if (g.winner === 'undercover') return t('host.room.winUndercover');
+  if (g.winner === 'mrWhite') return t('host.room.winMrWhite');
   return '';
 }
 
@@ -100,7 +104,7 @@ function toggleReveal() {
   if (!answersRevealed.value) {
     if (
       !window.confirm(
-        'Reveal shows every secret word and role on THIS screen. Make sure it is not mirrored to the projector. Continue?',
+        t('host.room.confirmReveal'),
       )
     )
       return;
@@ -109,7 +113,7 @@ function toggleReveal() {
 }
 
 async function endRoom() {
-  if (!window.confirm('End this session for everyone?')) return;
+  if (!window.confirm(t('host.room.confirmEndRoom'))) return;
   router.replace('/undercover');
   void host.endRoom();
 }
@@ -118,9 +122,9 @@ async function endRoom() {
 <template>
   <div class="page page--wide dashboard">
     <div v-if="host.closedReason" class="card closed rise">
-      <h2>Session ended</h2>
+      <h2>{{ t('host.room.sessionEnded') }}</h2>
       <p>{{ host.closedReason }}</p>
-      <router-link to="/undercover/host"><BaseButton variant="primary">Host a new room</BaseButton></router-link>
+      <router-link to="/undercover/host"><BaseButton variant="primary">{{ t('host.room.newRoom') }}</BaseButton></router-link>
     </div>
 
     <template v-else-if="host.room">
@@ -128,12 +132,12 @@ async function endRoom() {
       <div class="card headline rise">
         <div class="join-info">
           <p class="session-name">{{ host.room.config.sessionName }}</p>
-          <p class="mode-tag">{{ mode === 'team' ? 'Teams vs teams' : 'Each group plays its own game' }}</p>
-          <p class="join-label">Join at</p>
+          <p class="mode-tag">{{ mode === 'team' ? t('host.setup.modeTeam') : t('host.setup.modeGroups') }}</p>
+          <p class="join-label">{{ t('host.room.joinTitle') }}</p>
           <p class="join-url">{{ host.joinUrl ?? '…' }}</p>
           <p class="room-code" aria-label="Room code">{{ host.room.code }}</p>
           <p class="joined pop" :key="joinedCount">
-            👥 {{ joinedCount }} player{{ joinedCount === 1 ? '' : 's' }} joined
+            👥 {{ joinedCount }} {{ t('host.room.players') }}
           </p>
         </div>
         <div class="qr">
@@ -141,30 +145,30 @@ async function endRoom() {
         </div>
         <div class="controls">
           <BaseButton v-if="canStart" variant="accent" size="lg" @click="host.action({ type: 'startGame' })">
-            ▶ {{ mode === 'team' ? 'Start game' : 'Start all groups' }}
+            ▶ {{ t('host.room.startGame') }}
           </BaseButton>
           <BaseButton
             v-if="mode === 'team' && host.room.started && host.room.phase !== 'ended'"
             variant="ghost"
             @click="host.action({ type: 'skipPhase' })"
-          >Skip phase</BaseButton>
+          >{{ t('host.room.skipPhase') }}</BaseButton>
           <BaseButton
             v-if="mode === 'team' && host.room.phase === 'elimination'"
             variant="primary"
             @click="host.action({ type: 'nextRound' })"
-          >Next round</BaseButton>
+          >{{ t('game.nextRound') }}</BaseButton>
           <BaseButton
             v-if="mode === 'team' && host.room.phase === 'ended'"
             variant="accent"
             @click="host.action({ type: 'restartGame' })"
-          >Play again</BaseButton>
+          >{{ t('host.room.playAgain') }}</BaseButton>
           <BaseButton variant="ghost" @click="toggleReveal">
-            {{ answersRevealed ? '🙈 Hide answers' : '👁 Reveal answers' }}
+            {{ answersRevealed ? t('host.room.hideAnswers') : t('host.room.revealAnswers') }}
           </BaseButton>
           <BaseButton variant="ghost" @click="settingsOpen = !settingsOpen">
-            {{ settingsOpen ? '✕ Close settings' : '⚙️ Settings' }}
+            {{ settingsOpen ? t('host.room.closeSettings') : t('host.room.settings') }}
           </BaseButton>
-          <BaseButton variant="danger" @click="endRoom">End session</BaseButton>
+          <BaseButton variant="danger" @click="endRoom">{{ t('host.room.endSession') }}</BaseButton>
         </div>
       </div>
 
@@ -222,35 +226,35 @@ async function endRoom() {
       <div v-if="mode === 'team' && host.room.started" class="card progress rise">
         <div class="prog-head">
           <span class="phase-tag">{{ phaseLabel(host.room.phase) }}</span>
-          <span v-if="host.room.round" class="round-tag">Round {{ host.room.round }}</span>
+          <span v-if="host.room.round" class="round-tag">{{ t('host.room.roundNum', { n: host.room.round }) }}</span>
           <span
             v-if="secondsLeft(host.room.phaseEndsAt) !== null"
             class="timer"
             :class="{ urgent: (secondsLeft(host.room.phaseEndsAt) ?? 99) <= 10 }"
           >⏱ {{ secondsLeft(host.room.phaseEndsAt) }}s</span>
         </div>
-        <p v-if="host.room.phase === 'reveal'" class="prog-line">🔐 {{ readyTotal }}/{{ memTotal }} members ready</p>
+        <p v-if="host.room.phase === 'reveal'" class="prog-line">🔐 {{ t('host.room.membersReady', { ready: readyTotal, total: memTotal }) }}</p>
         <p v-else-if="host.room.currentSpeakerGroupId" class="prog-line">
-          🎤 Team {{ host.room.groups[host.room.currentSpeakerGroupId]?.name }} is speaking
+          🎤 {{ t('host.room.speakingTeam', { name: host.room.groups[host.room.currentSpeakerGroupId]?.name }) }}
         </p>
         <p v-else-if="host.room.phase === 'vote'" class="prog-line">
-          🗳 {{ host.room.votesIn }}/{{ host.room.votersTotal }} teams voted
-          <span v-if="host.room.isRunoffVote" class="tag">tie-break</span>
+          🗳 {{ t('host.room.votedTeams', { voted: host.room.votesIn, total: host.room.votersTotal }) }}
+          <span v-if="host.room.isRunoffVote" class="tag">{{ t('host.room.runoffVote') }}</span>
         </p>
         <p v-else-if="host.room.phase === 'elimination'" class="prog-line">
           {{
             host.room.lastElimination
-              ? `❌ Team ${host.room.groups[host.room.lastElimination.groupId]?.name} voted out (${roleLabel(host.room.lastElimination.role)})`
-              : '🤝 Tie again — nobody eliminated this round'
+              ? t('host.room.votedOutTeam', { name: host.room.groups[host.room.lastElimination.groupId]?.name, role: roleLabel(host.room.lastElimination.role) })
+              : t('host.room.tieNoElimination')
           }}
         </p>
         <p v-else-if="host.room.phase === 'ended'" class="prog-line win">
-          {{ host.room.winner === 'civilians' ? '🏆 Civilian teams win' : '🕵️ The undercover team wins' }}
+          {{ host.room.winner === 'civilians' ? t('host.room.civilianTeamsWin') : t('host.room.undercoverTeamWins') }}
         </p>
       </div>
 
       <p v-if="unassigned.length" class="card unassigned rise">
-        <strong>Choosing a team:</strong>
+        <strong>{{ t('host.room.choosingTeam') }}</strong>
         <span v-for="p in unassigned" :key="p.id" class="chip">{{ p.name }}</span>
       </p>
 
@@ -265,32 +269,32 @@ async function endRoom() {
           <header class="group-head">
             <span class="group-name">{{ g.name }}</span>
             <span class="group-status">
-              {{ mode === 'team' ? (!host.room?.started ? 'Waiting' : g.alive ? 'In' : 'Out') : (g.phase ? phaseLabel(g.phase) : 'Waiting') }}
+              {{ mode === 'team' ? (!host.room?.started ? t('host.room.groupWaiting') : g.alive ? t('host.room.groupIn') : t('host.room.groupOut')) : (g.phase ? phaseLabel(g.phase) : t('host.room.groupWaiting')) }}
             </span>
           </header>
 
           <div class="group-meta">
-            <span>{{ g.playerCount }}/{{ host.room?.config.groupSize }} players</span>
-            <span v-if="mode === 'groups' && g.round">Round {{ g.round }}</span>
+            <span>{{ t('host.room.membersCount', { count: g.playerCount, total: host.room?.config.groupSize }) }}</span>
+            <span v-if="mode === 'groups' && g.round">{{ t('host.room.roundNum', { n: g.round }) }}</span>
             <span v-if="secondsLeft(g.phaseEndsAt) !== null" class="gtimer" :class="{ urgent: (secondsLeft(g.phaseEndsAt) ?? 99) <= 10 }">⏱ {{ secondsLeft(g.phaseEndsAt) }}s</span>
           </div>
 
           <!-- groups mode: this group's internal game -->
           <template v-if="mode === 'groups' && g.phase">
-            <p v-if="g.phase === 'reveal'" class="gprog">🔐 {{ g.readyMemberIds.length }}/{{ g.playerCount }} ready</p>
-            <p v-else-if="g.currentSpeakerId" class="gprog">🎤 {{ memberName(g.currentSpeakerId) }} speaking</p>
+            <p v-if="g.phase === 'reveal'" class="gprog">🔐 {{ t('host.room.membersReady', { ready: g.readyMemberIds.length, total: g.playerCount }) }}</p>
+            <p v-else-if="g.currentSpeakerId" class="gprog">🎤 {{ t('host.room.speakingPlayer', { name: memberName(g.currentSpeakerId) }) }}</p>
             <p v-else-if="g.phase === 'vote'" class="gprog">
-              🗳 {{ g.votesIn }}/{{ g.votersTotal }} voted <span v-if="g.isRunoffVote" class="tag">tie-break</span>
+              🗳 {{ t('host.room.votedPlayers', { voted: g.votesIn, total: g.votersTotal }) }} <span v-if="g.isRunoffVote" class="tag">{{ t('host.room.runoffVote') }}</span>
             </p>
             <p v-else-if="g.phase === 'elimination'" class="gprog">
-              {{ g.lastElimination ? `❌ ${memberName(g.lastElimination.playerId)} out (${roleLabel(g.lastElimination.role)})` : '🤝 Tie — nobody out' }}
+              {{ g.lastElimination ? t('host.room.votedOutPlayer', { name: memberName(g.lastElimination.playerId), role: roleLabel(g.lastElimination.role) }) : t('host.room.tieNoEliminationPlayer') }}
             </p>
             <p v-else-if="g.phase === 'ended'" class="gprog win">{{ winnerLabel(g) }}</p>
           </template>
 
           <!-- team mode: reveal progress -->
           <p v-else-if="mode === 'team' && host.room?.phase === 'reveal'" class="gprog">
-            🔐 {{ g.readyMemberIds.length }}/{{ g.playerCount }} ready
+            🔐 {{ t('host.room.membersReady', { ready: g.readyMemberIds.length, total: g.playerCount }) }}
           </p>
 
           <ul class="members">
@@ -308,17 +312,17 @@ async function endRoom() {
 
           <!-- groups mode: per-group controls -->
           <div v-if="mode === 'groups' && g.phase && g.phase !== 'reveal'" class="group-actions">
-            <BaseButton v-if="g.phase !== 'ended' && g.phase !== 'elimination'" variant="ghost" @click="host.action({ type: 'skipPhase', groupId: g.id })">Skip</BaseButton>
-            <BaseButton v-if="g.phase === 'elimination'" variant="primary" @click="host.action({ type: 'nextRound', groupId: g.id })">Next round</BaseButton>
-            <BaseButton v-if="g.phase === 'ended'" variant="accent" @click="host.action({ type: 'restartGame', groupId: g.id })">Play again</BaseButton>
+            <BaseButton v-if="g.phase !== 'ended' && g.phase !== 'elimination'" variant="ghost" @click="host.action({ type: 'skipPhase', groupId: g.id })">{{ t('host.room.skip') }}</BaseButton>
+            <BaseButton v-if="g.phase === 'elimination'" variant="primary" @click="host.action({ type: 'nextRound', groupId: g.id })">{{ t('game.nextRound') }}</BaseButton>
+            <BaseButton v-if="g.phase === 'ended'" variant="accent" @click="host.action({ type: 'restartGame', groupId: g.id })">{{ t('host.room.playAgain') }}</BaseButton>
           </div>
         </div>
       </div>
     </template>
 
     <div v-else class="loading-box">
-      <p>Reconnecting to your room…</p>
-      <router-link to="/undercover" class="back-link">← Back to menu</router-link>
+      <p>{{ t('host.room.reconnecting') }}</p>
+      <router-link to="/undercover" class="back-link">{{ t('host.room.backToMenu') }}</router-link>
     </div>
   </div>
 </template>

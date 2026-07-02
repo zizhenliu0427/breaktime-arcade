@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import BaseButton from '../ui/BaseButton.vue';
 import { usePassPlayStore } from '../../stores/passPlay';
 
+const { t } = useI18n();
 const store = usePassPlayStore();
 const eliminated = computed(() => store.eliminatedPlayer);
 const roleLabel = computed(() => {
   switch (store.game?.lastElimination?.role) {
     case 'undercover':
-      return 'the Undercover';
+      return t('game.roleUndercoverPlayer');
     case 'mrWhite':
-      return 'Mr White';
+      return t('game.roleMrWhitePlayer');
     default:
-      return 'a Civilian';
+      return t('game.roleCivilianPlayer');
   }
 });
 </script>
@@ -26,22 +28,19 @@ const roleLabel = computed(() => {
           <span class="face back">{{ store.game?.lastElimination?.role === 'civilian' ? '😇' : '🕵️' }}</span>
         </div>
       </div>
-      <h2>{{ eliminated.name }} received the most votes.</h2>
-      <p class="role-line">
-        {{ eliminated.name }} was <strong>{{ roleLabel }}</strong
-        >.
-      </p>
-      <p class="note">Their word stays hidden until the game ends.</p>
+      <h2>{{ t('game.eliminatedTitle', { name: eliminated.name }) }}</h2>
+      <p class="role-line" v-html="t('game.eliminatedWas', { name: eliminated.name, role: roleLabel })"></p>
+      <p class="note">{{ t('game.wordStaysHidden') }}</p>
     </template>
 
     <template v-else>
       <div class="tie" aria-hidden="true">🤝</div>
-      <h2>Still tied!</h2>
-      <p class="role-line">Nobody is eliminated this round.</p>
+      <h2>{{ t('game.stillTied') }}</h2>
+      <p class="role-line">{{ t('game.nobodyEliminated') }}</p>
     </template>
 
     <BaseButton variant="accent" size="lg" block @click="store.continueAfterElimination()">
-      Next round
+      {{ t('game.nextRound') }}
     </BaseButton>
   </div>
 </template>

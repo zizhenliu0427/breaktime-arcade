@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 interface GameCard {
   title: string;
@@ -60,9 +63,9 @@ const decorations = [
         {{ d.emoji }}
       </span>
     </div>
-    <h1 class="rise">Breaktime Arcade</h1>
+    <h1 class="rise">{{ t('home.title') }}</h1>
     <p class="rise" style="animation-delay: 60ms">
-      Quick party games for the classroom, made for phones, tablets and computers.
+      {{ t('home.subtitle') }}
     </p>
   </div>
 
@@ -80,7 +83,7 @@ const decorations = [
         <div class="emoji" aria-hidden="true">{{ game.emoji }}</div>
         <h2>{{ game.title }}</h2>
         <span class="status" :class="game.available ? 'live' : 'soon'">
-          {{ game.available ? 'Available now' : 'Coming soon' }}
+          {{ game.available ? t('home.available') : t('home.soon') }}
         </span>
         <ul class="tags">
           <li v-for="tag in game.tags" :key="tag">{{ tag }}</li>

@@ -1,13 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import BaseButton from '../../components/ui/BaseButton.vue';
 import TimerRing from '../../components/ui/TimerRing.vue';
 
-/**
- * Presenter Demo — a projector-friendly, step-by-step walkthrough of
- * Who's Undercover? using fake example players. Everything is revealed
- * openly so the audience learns the mechanics. No real game state runs.
- */
+const { t } = useI18n();
 
 interface DemoPlayer {
   name: string;
@@ -17,32 +14,32 @@ interface DemoPlayer {
   clue: string;
 }
 
-const civilianWord = 'Train';
-const undercoverWord = 'Tram';
+const civilianWord = computed(() => t('demo.civWord'));
+const undercoverWord = computed(() => t('demo.ucWord'));
 
-const players = ref<DemoPlayer[]>([
-  { name: 'Alice', role: 'civilian', word: civilianWord, alive: true, clue: '"It runs on a schedule and stops at stations."' },
-  { name: 'Bob', role: 'civilian', word: civilianWord, alive: true, clue: '"I take it to work every morning — long distance."' },
-  { name: 'Charlie', role: 'undercover', word: undercoverWord, alive: true, clue: '"You can see it going through the city streets."' },
-  { name: 'Daisy', role: 'civilian', word: civilianWord, alive: true, clue: '"It has carriages and a driver at the front."' },
-  { name: 'Ethan', role: 'civilian', word: civilianWord, alive: true, clue: '"You buy a ticket from a machine at the platform."' },
+const players = computed<DemoPlayer[]>(() => [
+  { name: 'Alice', role: 'civilian', word: civilianWord.value, alive: true, clue: t('demo.players.aliceClue') },
+  { name: 'Bob', role: 'civilian', word: civilianWord.value, alive: true, clue: t('demo.players.bobClue') },
+  { name: 'Charlie', role: 'undercover', word: undercoverWord.value, alive: true, clue: t('demo.players.charlieClue') },
+  { name: 'Daisy', role: 'civilian', word: civilianWord.value, alive: true, clue: t('demo.players.daisyClue') },
+  { name: 'Ethan', role: 'civilian', word: civilianWord.value, alive: true, clue: t('demo.players.ethanClue') },
 ]);
 
 const step = ref(0);
 
-const steps = [
-  { id: 'intro', title: 'The Game', emoji: '🕵️' },
-  { id: 'deal', title: 'Deal Words', emoji: '🃏' },
-  { id: 'clue', title: 'Give Clues', emoji: '🎤' },
-  { id: 'discuss', title: 'Discuss', emoji: '💬' },
-  { id: 'vote', title: 'Vote', emoji: '🗳️' },
-  { id: 'reveal', title: 'Reveal', emoji: '🔍' },
-  { id: 'win', title: 'Who Wins?', emoji: '🏆' },
-];
+const steps = computed(() => [
+  { id: 'intro', title: t('demo.stepTitles.intro'), emoji: '🕵️' },
+  { id: 'deal', title: t('demo.stepTitles.deal'), emoji: '🃏' },
+  { id: 'clue', title: t('demo.stepTitles.clue'), emoji: '🎤' },
+  { id: 'discuss', title: t('demo.stepTitles.discuss'), emoji: '💬' },
+  { id: 'vote', title: t('demo.stepTitles.vote'), emoji: '🗳️' },
+  { id: 'reveal', title: t('demo.stepTitles.reveal'), emoji: '🔍' },
+  { id: 'win', title: t('demo.stepTitles.win'), emoji: '🏆' },
+]);
 
-const currentStep = computed(() => steps[step.value]!);
+const currentStep = computed(() => steps.value[step.value]!);
 const isFirst = computed(() => step.value === 0);
-const isLast = computed(() => step.value === steps.length - 1);
+const isLast = computed(() => step.value === steps.value.length - 1);
 
 function next() {
   if (!isLast.value) step.value++;
@@ -79,25 +76,25 @@ function restart() {
       <!-- INTRO -->
       <section v-if="currentStep.id === 'intro'" key="intro" class="stage pop">
         <div class="stage-emoji">🕵️</div>
-        <h1>Who's Undercover?</h1>
-        <p class="lead">A social deduction word game for 4–10 players.</p>
+        <h1>{{ t('demo.title') }}</h1>
+        <p class="lead">{{ t('demo.leadIntro') }}</p>
         <div class="card rule-card">
           <ul class="rules">
-            <li>Everyone receives a <strong>secret word</strong>.</li>
-            <li>Most players get the <strong>same word</strong> — they are <span class="tag civ">Civilians</span>.</li>
-            <li>One player gets a <strong>similar but different word</strong> — they are the <span class="tag uc">Undercover</span>.</li>
-            <li><strong>Nobody knows</strong> which word is which, or who has what.</li>
-            <li>The goal: <span class="tag civ">Civilians</span> try to find the <span class="tag uc">Undercover</span>. The <span class="tag uc">Undercover</span> tries to blend in.</li>
+            <li v-html="t('demo.introRules.rule1')" />
+            <li v-html="t('demo.introRules.rule2')" />
+            <li v-html="t('demo.introRules.rule3')" />
+            <li v-html="t('demo.introRules.rule4')" />
+            <li v-html="t('demo.introRules.rule5')" />
           </ul>
         </div>
-        <p class="example-note">Let's walk through one round with 5 example players.</p>
+        <p class="example-note">{{ t('demo.introTip') }}</p>
       </section>
 
       <!-- DEAL -->
       <section v-else-if="currentStep.id === 'deal'" key="deal" class="stage pop">
         <div class="stage-emoji">🃏</div>
-        <h1>Step 1 · Deal Words</h1>
-        <p class="lead">Each player secretly receives a word. In a real game, only you can see your own word.</p>
+        <h1>{{ t('demo.stepTitles.deal') }}</h1>
+        <p class="lead">{{ t('demo.dealSubtitle') }}</p>
         <div class="player-grid">
           <div
             v-for="p in players"
@@ -109,22 +106,19 @@ function restart() {
             <div class="pc-word">{{ p.word }}</div>
             <div class="pc-role">
               <span :class="p.role === 'undercover' ? 'tag uc' : 'tag civ'">
-                {{ p.role === 'undercover' ? '🕵️ Undercover' : '😇 Civilian' }}
+                {{ p.role === 'undercover' ? t('demo.dealRoleUndercover') : t('demo.dealRoleCivilian') }}
               </span>
             </div>
           </div>
         </div>
-        <div class="demo-note">
-          <strong>📽️ Demo mode:</strong> Everything is revealed openly. In the real game, each player only sees
-          their own word — nobody knows if they are the Undercover!
-        </div>
+        <div class="demo-note" v-html="t('demo.dealNote')"></div>
       </section>
 
       <!-- CLUE -->
       <section v-else-if="currentStep.id === 'clue'" key="clue" class="stage pop">
         <div class="stage-emoji">🎤</div>
-        <h1>Step 2 · Give Clues</h1>
-        <p class="lead">Players take turns giving <strong>one short clue</strong> about their word. You must not say the word, spell it, or give its first letter.</p>
+        <h1>{{ t('demo.stepTitles.clue') }}</h1>
+        <p class="lead">{{ t('demo.clueSubtitle') }}</p>
         <div class="clue-list">
           <div v-for="(p, i) in players" :key="p.name" class="clue-row" :class="{ undercover: p.role === 'undercover' }">
             <span class="clue-num">{{ i + 1 }}</span>
@@ -133,39 +127,36 @@ function restart() {
             <span class="clue-word">{{ p.word }}</span>
           </div>
         </div>
-        <div class="demo-note">
-          🤔 Notice how Charlie's clue says <em>"city streets"</em> — that's because his word is <strong>Tram</strong>,
-          not Train. Small differences like this are what players listen for!
-        </div>
+        <div class="demo-note" v-html="t('demo.clueNote')"></div>
       </section>
 
       <!-- DISCUSS -->
       <section v-else-if="currentStep.id === 'discuss'" key="discuss" class="stage pop">
         <div class="stage-emoji">💬</div>
-        <h1>Step 3 · Discuss</h1>
-        <p class="lead">Players have <strong>45 seconds</strong> to talk about whose clue felt suspicious.</p>
+        <h1>{{ t('demo.stepTitles.discuss') }}</h1>
+        <p class="lead">{{ t('demo.discussSubtitle') }}</p>
         <div class="discuss-demo">
           <TimerRing :remaining="32" :total="45" :size="130" />
         </div>
         <div class="card speech-bubbles">
           <div class="bubble b-left">
-            <strong>Alice:</strong> "Charlie mentioned streets — trains don't really go on streets, do they?"
+            <strong>Alice:</strong> {{ t('demo.discussSpeech.alice') }}
           </div>
           <div class="bubble b-right">
-            <strong>Charlie:</strong> "Well, some trains go through city areas… I was thinking of urban lines."
+            <strong>Charlie:</strong> {{ t('demo.discussSpeech.charlie') }}
           </div>
           <div class="bubble b-left">
-            <strong>Bob:</strong> "Hmm, that's a stretch. I'm suspicious."
+            <strong>Bob:</strong> {{ t('demo.discussSpeech.bob') }}
           </div>
         </div>
-        <p class="discuss-tip">💡 The Undercover must be careful — their clue needs to fit in without being too vague or too specific!</p>
+        <p class="discuss-tip">{{ t('demo.discussTip') }}</p>
       </section>
 
       <!-- VOTE -->
       <section v-else-if="currentStep.id === 'vote'" key="vote" class="stage pop">
         <div class="stage-emoji">🗳️</div>
-        <h1>Step 4 · Vote</h1>
-        <p class="lead">Everyone votes for who they think is the Undercover. The player with the most votes is out.</p>
+        <h1>{{ t('demo.stepTitles.vote') }}</h1>
+        <p class="lead">{{ t('demo.voteSubtitle') }}</p>
         <div class="vote-grid">
           <div v-for="p in players" :key="p.name" class="vote-row">
             <span class="vr-name">{{ p.name }}</span>
@@ -175,31 +166,28 @@ function restart() {
             </span>
           </div>
         </div>
-        <div class="vote-result card">
-          <strong>Result:</strong> Charlie received <strong>3 votes</strong> — the most.
-          Charlie is eliminated!
-        </div>
-        <p class="vote-tip">💡 If it's a tie, the tied players give one more clue each, then the others revote.</p>
+        <div class="vote-result card" v-html="t('demo.voteResult')"></div>
+        <p class="vote-tip">{{ t('demo.voteTip') }}</p>
       </section>
 
       <!-- REVEAL -->
       <section v-else-if="currentStep.id === 'reveal'" key="reveal" class="stage pop">
         <div class="stage-emoji">🔍</div>
-        <h1>Step 5 · Reveal</h1>
-        <p class="lead">The eliminated player's <strong>role</strong> is shown — but their word stays hidden until the game ends.</p>
+        <h1>{{ t('demo.stepTitles.reveal') }}</h1>
+        <p class="lead">{{ t('demo.revealSubtitle') }}</p>
         <div class="reveal-card card">
           <div class="reveal-flip">
             <span class="face-icon">🕵️</span>
           </div>
-          <h2>Charlie was the <span class="tag uc">Undercover</span>!</h2>
-          <p>The Civilians correctly identified the Undercover. The words are now revealed to everyone:</p>
+          <h2>{{ t('demo.revealWinner') }}</h2>
+          <p>{{ t('demo.revealDetails') }}</p>
           <div class="word-pair">
             <div class="wp civ-box">
-              <span class="wp-label">Civilian word</span>
+              <span class="wp-label">{{ t('game.civilianWord') }}</span>
               <span class="wp-value">{{ civilianWord }}</span>
             </div>
             <div class="wp uc-box">
-              <span class="wp-label">Undercover word</span>
+              <span class="wp-label">{{ t('game.undercoverWord') }}</span>
               <span class="wp-value">{{ undercoverWord }}</span>
             </div>
           </div>
@@ -209,33 +197,33 @@ function restart() {
       <!-- WIN -->
       <section v-else-if="currentStep.id === 'win'" key="win" class="stage pop">
         <div class="stage-emoji">🏆</div>
-        <h1>Who Wins?</h1>
+        <h1>{{ t('demo.winTitle') }}</h1>
         <div class="win-grid">
           <div class="card win-card civ-win">
             <div class="wc-emoji">😇</div>
-            <h2>Civilians win</h2>
-            <p>Vote out the Undercover before it's too late.</p>
+            <h2>{{ t('demo.winCivTitle') }}</h2>
+            <p>{{ t('demo.winCivDesc') }}</p>
           </div>
           <div class="card win-card uc-win">
             <div class="wc-emoji">🕵️</div>
-            <h2>Undercover wins</h2>
-            <p>Survive until only one Civilian is left. Blend in!</p>
+            <h2>{{ t('demo.winUcTitle') }}</h2>
+            <p>{{ t('demo.winUcDesc') }}</p>
           </div>
         </div>
         <div class="card tip-card">
-          <h3>🎯 Tips for the class</h3>
+          <h3>{{ t('demo.tipsTitle') }}</h3>
           <ul class="tips">
-            <li><strong>Civilians:</strong> Give clues specific enough that teammates recognise the word — but vague enough that the Undercover can't guess it.</li>
-            <li><strong>Undercover:</strong> Listen carefully and match the others' clue style. Don't be too specific or too vague.</li>
-            <li><strong>Everyone:</strong> Pay attention to who says something slightly off!</li>
+            <li><strong>{{ t('demo.tipsList.tip1').split(':')[0] }}:</strong>{{ t('demo.tipsList.tip1').substring(t('demo.tipsList.tip1').indexOf(':') + 1) }}</li>
+            <li><strong>{{ t('demo.tipsList.tip2').split(':')[0] }}:</strong>{{ t('demo.tipsList.tip2').substring(t('demo.tipsList.tip2').indexOf(':') + 1) }}</li>
+            <li><strong>{{ t('demo.tipsList.tip3').split(':')[0] }}:</strong>{{ t('demo.tipsList.tip3').substring(t('demo.tipsList.tip3').indexOf(':') + 1) }}</li>
           </ul>
         </div>
         <div class="final-actions">
           <router-link to="/undercover/host">
-            <BaseButton variant="accent" size="lg">Host a Live Room</BaseButton>
+            <BaseButton variant="accent" size="lg">{{ t('undercover.hostRoom') }}</BaseButton>
           </router-link>
           <router-link to="/undercover/pass-and-play">
-            <BaseButton variant="primary" size="lg">Pass &amp; Play</BaseButton>
+            <BaseButton variant="primary" size="lg">{{ t('undercover.passPlay') }}</BaseButton>
           </router-link>
         </div>
       </section>
@@ -243,11 +231,11 @@ function restart() {
 
     <!-- Navigation -->
     <div class="nav-bar rise" style="animation-delay: 200ms">
-      <BaseButton v-if="!isFirst" variant="ghost" @click="prev">← Back</BaseButton>
+      <BaseButton v-if="!isFirst" variant="ghost" @click="prev">{{ t('demo.backBtn') }}</BaseButton>
       <span v-else />
       <span class="nav-counter">{{ step + 1 }} / {{ steps.length }}</span>
-      <BaseButton v-if="!isLast" variant="accent" @click="next">Next →</BaseButton>
-      <BaseButton v-else variant="primary" @click="restart">🔄 Restart</BaseButton>
+      <BaseButton v-if="!isLast" variant="accent" @click="next">{{ t('demo.nextBtn') }}</BaseButton>
+      <BaseButton v-else variant="primary" @click="restart">{{ t('demo.restartBtn') }}</BaseButton>
     </div>
   </div>
 </template>

@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+
 interface Mode {
   title: string;
   desc: string;
@@ -7,39 +12,39 @@ interface Mode {
   soon?: boolean;
 }
 
-const modes: Mode[] = [
+const modes = computed<Mode[]>(() => [
   {
-    title: 'Pass & Play',
-    desc: 'Share one device within your group. Works without a network.',
+    title: t('undercover.passPlay'),
+    desc: t('undercover.passPlayDesc'),
     emoji: '🤝',
     to: '/undercover/pass-and-play',
   },
   {
-    title: 'Host a Live Room',
-    desc: 'The presenter controls the game from a computer while everyone joins by QR code.',
+    title: t('undercover.hostRoom'),
+    desc: t('undercover.hostRoomDesc'),
     emoji: '📡',
     to: '/undercover/host',
   },
   {
-    title: 'Presenter Demo',
-    desc: 'Demonstrate the rules on one screen — no real secrets handed out.',
+    title: t('undercover.demo'),
+    desc: t('undercover.demoDesc'),
     emoji: '📽️',
     to: '/undercover/demo',
   },
   {
-    title: 'How to Play',
-    desc: 'Learn the rules in under one minute.',
+    title: t('undercover.howToPlay'),
+    desc: t('undercover.howToPlayDesc'),
     emoji: '📖',
     to: '/undercover/how-to-play',
   },
-];
+]);
 </script>
 
 <template>
   <div class="page page-undercover">
-    <h1 class="rise">🕵️ Who's Undercover?</h1>
+    <h1 class="rise">{{ t('undercover.title') }}</h1>
     <p class="rise sub" style="animation-delay: 50ms">
-      A quick social deduction word game. Choose a mode to begin.
+      {{ t('undercover.subtitle') }}
     </p>
 
     <div class="modes">

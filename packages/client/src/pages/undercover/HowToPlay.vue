@@ -1,43 +1,40 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import BaseButton from '../../components/ui/BaseButton.vue';
+
+const { t } = useI18n();
 </script>
 
 <template>
   <div class="page">
-    <h1 class="rise">How to play</h1>
+    <h1 class="rise">{{ t('howTo.title') }}</h1>
 
     <div class="card rise" style="animation-delay: 60ms">
       <ol class="steps">
         <li>
-          <strong>See your word.</strong> Most players receive the same secret word; one player —
-          the Undercover — receives a similar but different one. Nobody is told which they are.
+          <strong>{{ t('howTo.step1title') }}</strong> {{ t('howTo.step1') }}
         </li>
         <li>
-          <strong>Give a clue.</strong> One at a time, say one short clue about your word. Don't
-          say the word, spell it, give its first letter or translate it.
+          <strong>{{ t('howTo.step2title') }}</strong> {{ t('howTo.step2') }}
         </li>
         <li>
-          <strong>Discuss.</strong> Talk about whose clue felt off. Keep it quick — around 45
-          seconds.
+          <strong>{{ t('howTo.step3title') }}</strong> {{ t('howTo.step3') }}
         </li>
         <li>
-          <strong>Vote.</strong> Everyone votes for the person they suspect. The player with the
-          most votes is out, and their role is revealed.
+          <strong>{{ t('howTo.step4title') }}</strong> {{ t('howTo.step4') }}
         </li>
         <li>
-          <strong>Win.</strong> Civilians win by voting out the Undercover. The Undercover wins by
-          surviving until only one Civilian remains.
+          <strong>{{ t('howTo.step5title') }}</strong> {{ t('howTo.step5') }}
         </li>
       </ol>
       <p class="tip">
-        💡 If the vote is tied, the tied players each give one more clue, then the others vote
-        again — only between them.
+        {{ t('howTo.tip') }}
       </p>
     </div>
 
     <div class="actions rise" style="animation-delay: 120ms">
       <router-link to="/undercover/pass-and-play">
-        <BaseButton variant="accent" size="lg">Play now</BaseButton>
+        <BaseButton variant="accent" size="lg">{{ t('howTo.playNow') }}</BaseButton>
       </router-link>
     </div>
   </div>

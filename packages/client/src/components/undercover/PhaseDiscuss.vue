@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import BaseButton from '../ui/BaseButton.vue';
 import TimerRing from '../ui/TimerRing.vue';
 import { usePassPlayStore } from '../../stores/passPlay';
 
+const { t } = useI18n();
 const store = usePassPlayStore();
 const total = store.game?.config.discussSeconds ?? 45;
 const remaining = ref(total);
@@ -24,15 +26,15 @@ onUnmounted(() => clearInterval(timer));
 
 <template>
   <div class="discuss pop">
-    <h2>💬 Discuss</h2>
-    <p class="sub">Who gave a suspicious clue? Talk it over — then vote.</p>
+    <h2>{{ t('game.discussTitle') }}</h2>
+    <p class="sub">{{ t('passPlay.discussInstruction') }}</p>
 
     <div class="ring">
       <TimerRing :remaining="remaining" :total="total" :size="150" />
     </div>
 
     <BaseButton variant="accent" size="lg" block @click="store.beginVoting()">
-      We're ready — start voting
+      {{ t('passPlay.readyStartVoting') }}
     </BaseButton>
   </div>
 </template>

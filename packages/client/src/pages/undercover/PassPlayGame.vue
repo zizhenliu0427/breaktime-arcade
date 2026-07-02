@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { usePassPlayStore } from '../../stores/passPlay';
 import PhaseReveal from '../../components/undercover/PhaseReveal.vue';
 import PhaseClue from '../../components/undercover/PhaseClue.vue';
@@ -9,6 +10,7 @@ import PhaseVote from '../../components/undercover/PhaseVote.vue';
 import PhaseElimination from '../../components/undercover/PhaseElimination.vue';
 import PhaseEnded from '../../components/undercover/PhaseEnded.vue';
 
+const { t } = useI18n();
 const store = usePassPlayStore();
 const router = useRouter();
 
@@ -19,7 +21,7 @@ onMounted(() => {
 });
 
 function quit() {
-  if (window.confirm('End this game for everyone?')) {
+  if (window.confirm(t('passPlay.confirmEndGame'))) {
     store.quit();
     router.push('/undercover');
   }
@@ -27,11 +29,11 @@ function quit() {
 </script>
 
 <template>
-  <div v-if="store.game" class="page game">
+  <div class="page game" v-if="store.game">
     <div class="statusbar">
-      <span class="round">Round {{ store.game.round }}</span>
-      <span class="alive">{{ store.alivePlayers.length }} players in</span>
-      <button class="quit" type="button" @click="quit">End game</button>
+      <span class="round">{{ t('host.room.roundNum', { n: store.game.round }) }}</span>
+      <span class="alive">{{ t('game.playersIn', { n: store.alivePlayers.length }) }}</span>
+      <button class="quit" type="button" @click="quit">{{ t('passPlay.endGame') }}</button>
     </div>
 
     <Transition name="phase" mode="out-in">

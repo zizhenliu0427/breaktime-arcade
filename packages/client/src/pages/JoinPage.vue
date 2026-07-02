@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { normaliseRoomCode, ROOM_CODE_LENGTH } from '@arcade/shared';
 import BaseButton from '../components/ui/BaseButton.vue';
 import { useOnlinePlayerStore } from '../stores/onlinePlayer';
+
+const { t } = useI18n();
 
 const route = useRoute();
 const router = useRouter();
@@ -44,14 +47,14 @@ async function join() {
 
 <template>
   <div class="page join">
-    <h1 class="rise">🎟 Join a game</h1>
+    <h1 class="rise">🎟 {{ t('player.joinTitle') }}</h1>
     <p class="sub rise" style="animation-delay: 50ms">
-      Enter the room code on the screen, pick your name, and you're in.
+      {{ t('player.joinSubtitle') }}
     </p>
 
     <form class="card rise" style="animation-delay: 90ms" @submit.prevent="join">
       <label class="field">
-        <span>Room code</span>
+        <span>{{ t('player.roomCode') }}</span>
         <input
           v-model="code"
           class="code-input"
@@ -65,12 +68,12 @@ async function join() {
         />
       </label>
       <label class="field">
-        <span>Your name</span>
+        <span>{{ t('player.yourName') }}</span>
         <input v-model="name" type="text" maxlength="20" autocomplete="off" placeholder="e.g. Jamie" />
       </label>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
       <BaseButton type="submit" variant="accent" size="lg" block :disabled="joining">
-        {{ joining ? 'Joining…' : 'Join room' }}
+        {{ joining ? t('player.joining') : t('player.join') }}
       </BaseButton>
     </form>
   </div>

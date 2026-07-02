@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { DEFAULT_ROOM_CONFIG, wordPacks } from '@arcade/shared';
 import BaseButton from '../../components/ui/BaseButton.vue';
 import { useOnlineHostStore } from '../../stores/onlineHost';
+
+const { t } = useI18n();
 
 const router = useRouter();
 const host = useOnlineHostStore();
@@ -26,27 +29,26 @@ async function create() {
 
 <template>
   <div class="page">
-    <h1 class="rise">📡 Host a Live Room</h1>
+    <h1 class="rise">📡 {{ t('host.setup.title') }}</h1>
     <p class="sub rise" style="animation-delay: 50ms">
-      Players join from their phones with a room code or QR code. You control everything from
-      this computer.
+      {{ t('host.setup.subtitle') }}
     </p>
 
     <div class="card rise" style="animation-delay: 90ms">
-      <h2>Session</h2>
+      <h2>{{ t('host.setup.sessionLabel') }}</h2>
       <label class="field">
-        <span>Session name</span>
+        <span>{{ t('host.setup.session') }}</span>
         <input v-model="config.sessionName" type="text" maxlength="40" />
       </label>
       <div class="row">
         <label class="field">
-          <span>Teams</span>
+          <span>{{ t('host.setup.groups') }}</span>
           <select v-model.number="config.groupCount">
             <option v-for="n in 6" :key="n" :value="n">{{ n }}</option>
           </select>
         </label>
         <label class="field">
-          <span>Players per team</span>
+          <span>{{ t('host.setup.groupSize') }}</span>
           <select v-model.number="config.groupSize">
             <option v-for="n in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]" :key="n" :value="n">{{ n }}</option>
           </select>
@@ -55,17 +57,17 @@ async function create() {
     </div>
 
     <div class="card rise" style="animation-delay: 130ms">
-      <h2>Game</h2>
+      <h2>{{ t('host.setup.gameLabel') }}</h2>
       <div class="row">
         <label class="field">
-          <span>Mode</span>
+          <span>{{ t('host.setup.mode') }}</span>
           <select v-model="config.mode">
-            <option value="team">Teams vs teams (whole class, one game)</option>
-            <option value="groups">Each group plays its own game</option>
+            <option value="team">{{ t('host.setup.modeTeam') }}</option>
+            <option value="groups">{{ t('host.setup.modeGroups') }}</option>
           </select>
         </label>
         <label class="field">
-          <span>Word pack</span>
+          <span>{{ t('host.setup.wordPack') }}</span>
           <select v-model="config.packId">
             <option v-for="pack in wordPacks" :key="pack.id" :value="pack.id">
               {{ pack.name }}
@@ -73,13 +75,13 @@ async function create() {
           </select>
         </label>
         <label class="field">
-          <span>Discussion timer</span>
+          <span>{{ t('host.setup.discussTimer') }}</span>
           <select v-model.number="config.discussSeconds">
             <option v-for="s in [30, 45, 60, 90, 120]" :key="s" :value="s">{{ s }}s</option>
           </select>
         </label>
         <label class="field">
-          <span>Voting timer</span>
+          <span>{{ t('host.setup.voteTimer') }}</span>
           <select v-model.number="config.voteSeconds">
             <option v-for="s in [15, 20, 30, 45, 60]" :key="s" :value="s">{{ s }}s</option>
           </select>
@@ -87,13 +89,13 @@ async function create() {
       </div>
       <label class="toggle">
         <input v-model="config.includeMrWhite" type="checkbox" />
-        <span>Include Mr White</span>
-        <span class="toggle-hint">One player gets no word at all and must bluff their way through.</span>
+        <span>{{ t('host.setup.mrWhite') }}</span>
+        <span class="toggle-hint">{{ t('host.setup.mrWhiteHint') }}</span>
       </label>
       <p class="hint">
         1 undercover {{ config.mode === 'team' ? 'team' : 'player' }} ·
         Mr White {{ config.includeMrWhite ? 'on' : 'off' }}.
-        {{ config.mode === 'team' ? 'Tip: set "Players per team = 1" to play every player for themselves.' : '' }}
+        {{ config.mode === 'team' ? t('host.setup.hintTeam') : '' }}
       </p>
     </div>
 
@@ -101,7 +103,7 @@ async function create() {
 
     <div class="start rise" style="animation-delay: 170ms">
       <BaseButton variant="accent" size="lg" block :disabled="creating" @click="create">
-        {{ creating ? 'Creating room…' : 'Create room' }}
+        {{ creating ? t('host.setup.creating') : t('host.setup.create') }}
       </BaseButton>
     </div>
   </div>

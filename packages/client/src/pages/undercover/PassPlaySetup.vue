@@ -1,10 +1,11 @@
-<script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { wordPacks } from '@arcade/shared';
 import BaseButton from '../../components/ui/BaseButton.vue';
 import { usePassPlayStore } from '../../stores/passPlay';
 
+const { t } = useI18n();
 const router = useRouter();
 const store = usePassPlayStore();
 
@@ -19,11 +20,11 @@ function addName() {
   const name = draft.value.trim();
   if (!name) return;
   if (names.value.some((n) => n.toLowerCase() === name.toLowerCase())) {
-    error.value = 'That name is already in the group.';
+    error.value = t('passPlay.nameAlreadyExists');
     return;
   }
   if (names.value.length >= 10) {
-    error.value = 'Ten players is the maximum for one group.';
+    error.value = t('passPlay.maxPlayersLimit');
     return;
   }
   names.value.push(name);
@@ -44,24 +45,24 @@ function start() {
 
 <template>
   <div class="page">
-    <h1 class="rise">🤝 Pass &amp; Play</h1>
+    <h1 class="rise">🤝 {{ t('passPlay.setupTitle') }}</h1>
     <p class="sub rise" style="animation-delay: 50ms">
-      Add everyone in your group, then pass this device around. 3–10 players.
+      {{ t('passPlay.setupSubtitle') }}
     </p>
 
     <div class="card rise" style="animation-delay: 90ms">
-      <h2>Players</h2>
+      <h2>{{ t('passPlay.players') }}</h2>
       <form class="add-row" @submit.prevent="addName">
         <input
           v-model="draft"
           type="text"
-          placeholder="Type a name…"
+          :placeholder="t('passPlay.typeAName')"
           maxlength="20"
           autocomplete="off"
           enterkeyhint="done"
           aria-label="Player name"
         />
-        <BaseButton variant="primary" @click="addName">Add</BaseButton>
+        <BaseButton variant="primary" @click="addName">{{ t('passPlay.add') }}</BaseButton>
       </form>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
 
@@ -74,12 +75,12 @@ function start() {
         </li>
       </TransitionGroup>
       <p v-if="names.length < 3" class="hint">
-        Add {{ 3 - names.length }} more {{ names.length === 2 ? 'player' : 'players' }} to start.
+        {{ names.length === 2 ? t('passPlay.addMoreOnePlayer') : t('passPlay.addMorePlayers', { n: 3 - names.length }) }}
       </p>
     </div>
 
     <div class="card rise" style="animation-delay: 130ms">
-      <h2>Word pack</h2>
+      <h2>{{ t('host.setup.wordPack') }}</h2>
       <div class="packs" role="radiogroup" aria-label="Word pack">
         <button
           v-for="pack in wordPacks"
@@ -91,17 +92,17 @@ function start() {
           :class="{ active: packId === pack.id }"
           @click="packId = pack.id"
         >
-          <strong>{{ pack.difficulty === 'easy' ? 'Easy' : 'Medium' }}</strong>
-          <span>{{ pack.pairs.length }} word pairs</span>
+          <strong>{{ pack.difficulty === 'easy' ? t('passPlay.easy') : t('passPlay.medium') }}</strong>
+          <span>{{ t('passPlay.wordPairsCount', { n: pack.pairs.length }) }}</span>
         </button>
       </div>
     </div>
 
     <div class="start rise" style="animation-delay: 170ms">
       <BaseButton variant="accent" size="lg" block :disabled="!canStart" @click="start">
-        Start game · {{ names.length }} player{{ names.length === 1 ? '' : 's' }}
+        {{ t('passPlay.startGameWithCount', { n: names.length }) }}
       </BaseButton>
-      <p class="hint">One player will secretly be the Undercover. Mr White is off.</p>
+      <p class="hint">{{ t('passPlay.setupHint') }}</p>
     </div>
   </div>
 </template>

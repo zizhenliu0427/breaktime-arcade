@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import BaseButton from '../ui/BaseButton.vue';
+
+const { t } = useI18n();
 
 defineProps<{
   playerName: string;
@@ -13,13 +16,13 @@ const emit = defineEmits<{ ready: [] }>();
 <template>
   <div class="mask pop">
     <div class="shield" aria-hidden="true">🔒</div>
-    <h2>Pass the device to</h2>
+    <h2>{{ t('passPlay.passDeviceTo') }}</h2>
     <div class="name">{{ playerName }}</div>
-    <p>{{ playerName }}, make sure nobody else can see the screen.</p>
+    <p>{{ t('passPlay.maskWarning', { name: playerName }) }}</p>
     <BaseButton variant="accent" size="lg" @click="emit('ready')">
-      I'm {{ playerName }} — I'm ready
+      {{ t('passPlay.imReadyBtn', { name: playerName }) }}
     </BaseButton>
-    <p class="task">Next: {{ task }}</p>
+    <p class="task">{{ t('passPlay.nextTask', { task: task }) }}</p>
   </div>
 </template>
 

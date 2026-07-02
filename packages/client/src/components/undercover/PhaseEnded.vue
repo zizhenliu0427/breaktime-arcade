@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import BaseButton from '../ui/BaseButton.vue';
 import { usePassPlayStore } from '../../stores/passPlay';
 
+const { t } = useI18n();
 const store = usePassPlayStore();
 const router = useRouter();
 
@@ -45,28 +47,25 @@ function backToMenu() {
 
     <div class="result pop">
       <div class="trophy" aria-hidden="true">{{ civiliansWin ? '😇' : '🕵️' }}</div>
-      <h2>{{ civiliansWin ? 'The Civilians win!' : 'The Undercover wins!' }}</h2>
-      <p class="reveal-line">
-        The Undercover was <strong>{{ undercover?.name }}</strong
-        >.
-      </p>
+      <h2>{{ civiliansWin ? t('game.theCiviliansWin') : t('game.theUndercoverWins') }}</h2>
+      <p class="reveal-line" v-html="t('game.undercoverWas', { label: t('game.vLabelPlayers'), name: undercover?.name })"></p>
 
       <div class="words">
         <div class="word-box civ">
-          <span class="label">Civilian word</span>
+          <span class="label">{{ t('game.civilianWord') }}</span>
           <span class="value">{{ civilianWord }}</span>
         </div>
         <div class="word-box uc">
-          <span class="label">Undercover word</span>
+          <span class="label">{{ t('game.undercoverWord') }}</span>
           <span class="value">{{ undercover?.word }}</span>
         </div>
       </div>
 
       <div class="actions">
         <BaseButton variant="accent" size="lg" block @click="playAgain">
-          Play again — new words
+          {{ t('passPlay.playAgainNewWords') }}
         </BaseButton>
-        <BaseButton variant="ghost" block @click="backToMenu">Back to menu</BaseButton>
+        <BaseButton variant="ghost" block @click="backToMenu">{{ t('game.backToMenu') }}</BaseButton>
       </div>
     </div>
   </div>
