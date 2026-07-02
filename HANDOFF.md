@@ -13,9 +13,9 @@
 2. `breaktime-arcade-project-plan-v2.md` — 用户的产品规划（规则细节、Host Dashboard、词库原则）
 3. `README.md`（英式英语）/ `README.zh-CN.md`（中文附属）
 
-## 当前状态：Online Room 双模式（team / groups）端到端可玩 + Presenter Demo 上线 ✅
+## 当前状态：Online Room 双模式（team / groups）端到端可玩 + Presenter Demo 上线 + 部署基础设施就绪 ✅
 
-Pass & Play 仍可玩；**Online Room 后端 + Host Dashboard + 玩家端全部接通**，单机已验证（typecheck 三包过、26/26 单测过、生产构建过、server 冒烟过、两种模式 smoke 过）。**Presenter Demo** 已上线（`/undercover/demo`），7 步交互式演示，投影友好，无真实秘密。
+Pass & Play 仍可玩；**Online Room 后端 + Host Dashboard + 玩家端全部接通**，单机已验证（typecheck 三包过、26/26 单测过、生产构建过、server 冒烟过、两种模式 smoke 过）。**Presenter Demo** 已上线（`/undercover/demo`）。**部署**：`start-tunnel.ps1`（方案 A）+ `render.yaml`（方案 B）就绪。**防护**：创房 5次/分/IP、加入 30次/分/IP 限速（`rateLimiter.ts`）；`trust proxy` 已配。
 
 ```
 packages/
@@ -70,7 +70,10 @@ Online Room 双模式 LAN 单机全通；剩下：
 2. ~~**Presenter Demo**（用户已要求）：投影演示规则 + 模拟一局，不发真实秘密。~~ ✅ 已完成（`/undercover/demo`，7 步交互式演示）。
 3. **Projector View**（§15.4）：独立全屏投影页，Kahoot 式，只显公开状态，**绝不泄秘密**——与 host 的 Reveal answers 物理分离。
 4. **连接切换器**（§6.5）：`Auto | Public | LAN` 开关 + `/health` 探测 + `projector:endpoint` 换二维码。关键差异：**Tunnel+LAN 同房无痛切换；Cloud 独立房间，回退需重进**。
-5. Cloudflare Tunnel + Cloud Docker 部署跑通，固定域名二维码课前打印。
+5. ~~Cloudflare Tunnel + Cloud Docker 部署跑通，固定域名二维码课前打印。~~ 🔧 **进行中**：
+   - **方案 A（Cloudflare Tunnel）**：`start-tunnel.ps1` 已就绪，winget 自动装 cloudflared，跑 `pnpm start` 后执行脚本即可得到公网 URL。不需要账号，URL 每次随机，关机即断。
+   - **方案 B（Render）**：`render.yaml` + 精简 Dockerfile（slim runtime）已就绪，push 后去 Render Dashboard → New → Blueprint 一键部署。Region：Singapore（最接近澳洲）。Free tier 闲置 15 min 冷启动；周六前 5 分钟手动开一次暖机。
+   - ⚠️ **待完成**：方案 B 需实际在 Render 上部署并验证 WebSocket 连接、生成固定二维码。
 6. 断线重连、PWA 离线、音效。
 7. P2：中文界面/词库、Mr White、其他游戏。
 8. P3：**架构成熟化**（展示后推进）：

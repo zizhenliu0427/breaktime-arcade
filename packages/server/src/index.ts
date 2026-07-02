@@ -11,6 +11,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
 
 const app = express();
+// Trust the first hop reverse proxy (Render, Railway, Cloudflare, Nginx…)
+// so req.ip / req.protocol / req.hostname reflect the real client values.
+app.set('trust proxy', 1);
 const http = createServer(app);
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>(

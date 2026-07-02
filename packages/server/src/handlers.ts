@@ -13,6 +13,7 @@ import type {
 } from '@arcade/shared';
 import { normaliseRoomCode } from '@arcade/shared';
 import { RoomManager, type Room } from './rooms';
+import { RateLimiter } from './rateLimiter';
 
 type IO = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 type Sock = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
@@ -21,6 +22,15 @@ const hostChannel = (code: string) => `${code}:host`;
 
 export function attachHandlers(io: IO): RoomManager {
   const manager = new RoomManager();
+
+  // Rate limiters — keyed by socket IP (trust proxy is set in index.ts).
+  // createRoom: max 5 rooms per IP per minute (prevents runaway host spam).
+  // playerJoin:  max 30 joins per IP per minute (prevents name-flood).
+  const createLimiter = new RateLimiter(5, 60_000);
+  const joinLimiter   = new RateLimiter(30, 60_000);
+  // Prune stale buckets every 10 minutes so the Map stays small.
+  const pruneTimer = setInterval(() => { createLimiter.prune(); joinLimiter.prune(); }, 10 * 60_000);
+  pruneTimer.unref(); // don't block process exit
 
   const broadcast = (room: Room) => {
     io.to(room.code).emit('room:state', manager.publicState(room));
@@ -39,6 +49,10 @@ export function attachHandlers(io: IO): RoomManager {
     /* ── Host ────────────────────────────────────────────────── */
 
     socket.on('host:create', (config, ack) => {
+      const ip = socket.handshake.address;
+      if (!createLimiter.check(ip)) {
+        return ack({ ok: false, error: `Too many rooms created. Try again in ${createLimiter.retryAfter(ip)}s.` });
+      }
       const room = manager.createRoom(config ?? {});
       socket.data = { roomCode: room.code, role: 'host' };
       socket.join(room.code);
@@ -95,6 +109,10 @@ export function attachHandlers(io: IO): RoomManager {
     /* ── Player ──────────────────────────────────────────────── */
 
     socket.on('player:join', ({ roomCode, name }, ack) => {
+      const ip = socket.handshake.address;
+      if (!joinLimiter.check(ip)) {
+        return ack({ ok: false, error: `Too many join attempts. Try again in ${joinLimiter.retryAfter(ip)}s.` });
+      }
       const room = manager.getRoom(roomCode);
       if (!room) return ack({ ok: false, error: 'Room not found. Check the code with your host.' });
       const player = manager.addPlayer(room, name ?? '');

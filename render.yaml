@@ -1,0 +1,27 @@
+# render.yaml — Render.com blueprint
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Deploy steps:
+#   1. Push this repo to GitHub (already done).
+#   2. Go to https://dashboard.render.com → New → Blueprint.
+#   3. Connect your GitHub repo — Render will auto-detect this file.
+#   4. Click "Apply" — it builds the Docker image and deploys.
+#   5. Your public URL is shown in the Render dashboard (e.g. https://breaktime-arcade.onrender.com).
+#
+# Free tier note: free instances spin down after 15 min of inactivity.
+# The first request after idle takes ~30s to cold-start.
+# For the Saturday class, open the URL yourself ~5 min before to warm it up.
+
+services:
+  - type: web
+    name: breaktime-arcade
+    runtime: docker          # uses the Dockerfile in repo root
+    plan: free               # upgrade to "starter" ($7/mo) for always-on
+    region: singapore        # closest to Australia; alternatives: oregon, frankfurt
+    branch: main
+    healthCheckPath: /health # Render pings this to confirm the app is up
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
