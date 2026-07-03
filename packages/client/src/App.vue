@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { RouterLink, RouterView } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { toggleLocale } from './i18n';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const currentLangLabel = computed(() => (locale.value === 'zh' ? '中文' : 'EN'));
 </script>
 
 <template>
@@ -13,7 +15,7 @@ const { t } = useI18n();
       <span class="brand-name">{{ t('nav.brand') }}</span>
     </RouterLink>
     <button class="lang" type="button" @click="toggleLocale">
-      {{ t('nav.langSwitch') }}
+      {{ currentLangLabel }}
     </button>
   </header>
   <main>

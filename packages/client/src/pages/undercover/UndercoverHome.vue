@@ -32,6 +32,12 @@ const modes = computed<Mode[]>(() => [
     to: '/undercover/demo',
   },
   {
+    title: t('undercover.simulate'),
+    desc: t('undercover.simulateDesc'),
+    emoji: '🤖',
+    to: '/undercover/simulate',
+  },
+  {
     title: t('undercover.howToPlay'),
     desc: t('undercover.howToPlayDesc'),
     emoji: '📖',

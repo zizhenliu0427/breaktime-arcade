@@ -1,6 +1,6 @@
 # HANDOFF — Breaktime Arcade
 
-> 给下一个会话的交接文档。最后更新：2026-07-03（Online Room 双模式 team/groups + 移动端修复 + 组名）。
+> 给下一个会话的交接文档。最后更新：2026-07-03（新增 Auto-Simulate 自动模拟模式 + 语言切换器显示当前语言 + 修复构建 bug + 本地公网部署跑通）。
 
 ## 项目是什么
 
@@ -15,7 +15,14 @@
 
 ## 当前状态：Online Room 双模式（team / groups）端到端可玩 + Presenter Demo 上线 + 部署基础设施就绪 ✅
 
-Pass & Play 仍可玩；**Online Room 后端 + Host Dashboard + 玩家端全部接通**，单机已验证（typecheck 三包过、26/26 单测过、生产构建过、server 冒烟过、两种模式 smoke 过）。**Presenter Demo** 已上线（`/undercover/demo`）。**部署**：`start-tunnel.ps1`（方案 A）+ `render.yaml`（方案 B）就绪。**防护**：创房 5次/分/IP、加入 30次/分/IP 限速（`rateLimiter.ts`）；`trust proxy` 已配。
+Pass & Play 仍可玩；**Online Room 后端 + Host Dashboard + 玩家端全部接通**，单机已验证（typecheck 三包过、26/26 单测过、生产构建过、server 冒烟过、两种模式 smoke 过）。**Presenter Demo** 已上线（`/undercover/demo`）。**Auto-Simulate 自动模拟** 已上线（`/undercover/simulate`）。**部署**：`start-tunnel.ps1`（方案 A）+ `render.yaml`（方案 B）就绪。**防护**：创房 5次/分/IP、加入 30次/分/IP 限速（`rateLimiter.ts`）；`trust proxy` 已配。
+
+**⚠️ 2026-07-03 本次会话改动（尚未 commit，建议一次性提交）：**
+- **修复构建 bug**：上一次 i18n 提交（`6110329`）误删了 `PassPlaySetup.vue` 和 `HostRoom.vue` 开头的 `<script setup lang="ts">` 标签，导致 `pnpm build` 直接失败。已补回，构建恢复正常。提交此修复用：`fix: restore missing <script setup> tag in PassPlaySetup and HostRoom`。
+- **语言切换器改为显示当前语言**：右上角按钮从"显示要切换到的目标语言"改为**显示当前语言**（英文界面显 `EN`，中文界面显 `中文`），点击行为不变。`App.vue` 用当前 `locale` 计算标签。顺手删掉了已无引用的 `nav.langSwitch` 翻译键（en/zh）。
+- **新增 Auto-Simulate 自动模拟模式**（`/undercover/simulate`，`pages/undercover/AutoSimulate.vue`）：一个人单机、上帝视角，用**真实规则引擎 + 机器人**自动跑完整一局（发词→逐个线索→讨论倒计时→机器人投票带箭头/计票→淘汰揭身份→下一轮→胜负），无需多设备/多人。可播放/暂停/单步、0.5×–4× 调速、重来、返回设置；右侧实时战报日志；可配玩家数(4–10)/卧底数/Mr White/词库；中英双语。机器人策略：卧底投平民、平民约 55% 概率怀疑到卧底。复用 `@arcade/shared` 引擎纯函数，机器人逻辑在页面内。首页(`UndercoverHome.vue`)第 5 张卡片，**Presenter Demo 原样保留**。
+- **本地公网部署已跑通**：`PORT=3211 pnpm start` + Cloudflare Quick Tunnel（`cloudflared`，winget 已装）。⚠️ Quick Tunnel 的 URL **每次重启随机、关机即断**，仅临时用；固定短域名需自有域名走 Cloudflare 命名隧道，或方案 B（Render）。用户已确认展示走"Cloudflare 长域名 + 二维码扫码"（无警告页最省事）。
+- **HostSetup 改为「意图优先」**：默认会话名 `PY Icebreaker` → **`Undercover Party`**（`DEFAULT_ROOM_CONFIG`，改了 shared 需重启 server）。设置页顶部新增「你们打算怎么玩？」三选一卡片，映射到底层 `mode/groupCount/groupSize`，**小班不再纠结"组数×人数"**：`solo`(每人独立=team+groupSize1+groupCount6，≤6 人) / `teams`(组间对抗=team+size>1) / `parallel`(多组并行=groups)。选 solo 时隐藏组数/人数控件；选 teams/parallel 才显示，且标签随之变（队伍/小组）。底部有容量说明句。移除了原来的 `Mode` 下拉（现由 play style 驱动）。底层模型零改动，规则/server 全复用。`host.setup.*` 加了 playStyle/style*/num*/per*/cap* 一批键（en+zh）。
 
 ```
 packages/

@@ -1,3 +1,4 @@
+<script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import QRCode from 'qrcode';

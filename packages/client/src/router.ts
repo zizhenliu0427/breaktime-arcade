@@ -45,6 +45,11 @@ export const router = createRouter({
       component: () => import('./pages/undercover/PresenterDemo.vue'),
     },
     {
+      path: '/undercover/simulate',
+      name: 'auto-simulate',
+      component: () => import('./pages/undercover/AutoSimulate.vue'),
+    },
+    {
       path: '/undercover/how-to-play',
       name: 'how-to-play',
       component: () => import('./pages/undercover/HowToPlay.vue'),

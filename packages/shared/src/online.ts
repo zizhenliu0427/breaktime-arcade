@@ -38,7 +38,7 @@ export interface RoomConfig {
 
 /** Recommended classroom defaults (product plan §14). */
 export const DEFAULT_ROOM_CONFIG: RoomConfig = {
-  sessionName: 'PY Icebreaker',
+  sessionName: 'Undercover Party',
   groupCount: 4,
   groupSize: 6,
   groupNames: ['Group 1', 'Group 2', 'Group 3', 'Group 4'],

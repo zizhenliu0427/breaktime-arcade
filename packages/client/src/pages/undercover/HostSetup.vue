@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { DEFAULT_ROOM_CONFIG, wordPacks } from '@arcade/shared';
@@ -13,6 +13,65 @@ const host = useOnlineHostStore();
 
 const config = reactive({ ...DEFAULT_ROOM_CONFIG });
 const creating = ref(false);
+
+/* ── Play style (intent-first) ──────────────────────────────────
+ * The room model underneath only knows `mode` + `groupCount` + `groupSize`.
+ * We expose a friendlier "how are you playing?" choice and map it onto those
+ * fields, so small groups never have to think in "groups × players".
+ *   solo     → one game, every player is their own seat (team mode, size 1)
+ *   teams    → one game, each team shares a word (team mode, size > 1)
+ *   parallel → each group plays its own separate game (groups mode)
+ */
+type PlayStyle = 'solo' | 'teams' | 'parallel';
+
+function styleFromConfig(): PlayStyle {
+  if (config.mode === 'groups') return 'parallel';
+  return config.groupSize <= 1 ? 'solo' : 'teams';
+}
+const playStyle = ref<PlayStyle>(styleFromConfig());
+
+const styles = computed(() => [
+  { id: 'solo' as const, emoji: '🙋', title: t('host.setup.styleSolo'), desc: t('host.setup.styleSoloDesc') },
+  { id: 'teams' as const, emoji: '🤝', title: t('host.setup.styleTeams'), desc: t('host.setup.styleTeamsDesc') },
+  { id: 'parallel' as const, emoji: '🎲', title: t('host.setup.styleParallel'), desc: t('host.setup.styleParallelDesc') },
+]);
+
+function setStyle(s: PlayStyle) {
+  playStyle.value = s;
+  if (s === 'solo') {
+    config.mode = 'team';
+    config.groupSize = 1;
+    config.groupCount = 6; // up to 6 individual seats
+  } else if (s === 'teams') {
+    config.mode = 'team';
+    if (config.groupSize < 2) config.groupSize = 6;
+    if (config.groupCount < 3) config.groupCount = 4;
+  } else {
+    config.mode = 'groups';
+    if (config.groupSize < 3) config.groupSize = 6;
+    if (config.groupCount < 1) config.groupCount = 4;
+  }
+}
+
+const showGroupControls = computed(() => playStyle.value !== 'solo');
+const countLabel = computed(() =>
+  playStyle.value === 'parallel' ? t('host.setup.numGroups') : t('host.setup.numTeams'),
+);
+const sizeLabel = computed(() =>
+  playStyle.value === 'parallel' ? t('host.setup.perGroup') : t('host.setup.perTeam'),
+);
+const countOptions = computed(() => (playStyle.value === 'parallel' ? [1, 2, 3, 4, 5, 6] : [3, 4, 5, 6]));
+const sizeOptions = computed(() =>
+  playStyle.value === 'parallel' ? [3, 4, 5, 6, 7, 8, 9, 10] : [2, 3, 4, 5, 6, 7, 8, 9, 10],
+);
+
+const capacityHint = computed(() => {
+  if (playStyle.value === 'solo') return t('host.setup.capSolo');
+  const total = config.groupCount * config.groupSize;
+  return playStyle.value === 'parallel'
+    ? t('host.setup.capParallel', { groups: config.groupCount, size: config.groupSize, total })
+    : t('host.setup.capTeams', { teams: config.groupCount, size: config.groupSize, total });
+});
 
 async function create() {
   creating.value = true;
@@ -34,38 +93,59 @@ async function create() {
       {{ t('host.setup.subtitle') }}
     </p>
 
+    <!-- Session name -->
     <div class="card rise" style="animation-delay: 90ms">
       <h2>{{ t('host.setup.sessionLabel') }}</h2>
       <label class="field">
         <span>{{ t('host.setup.session') }}</span>
         <input v-model="config.sessionName" type="text" maxlength="40" />
       </label>
-      <div class="row">
+    </div>
+
+    <!-- Play style -->
+    <div class="card rise" style="animation-delay: 120ms">
+      <h2>{{ t('host.setup.playStyleLabel') }}</h2>
+      <div class="styles" role="radiogroup" :aria-label="t('host.setup.playStyleLabel')">
+        <button
+          v-for="s in styles"
+          :key="s.id"
+          type="button"
+          class="style"
+          role="radio"
+          :aria-checked="playStyle === s.id"
+          :class="{ active: playStyle === s.id }"
+          @click="setStyle(s.id)"
+        >
+          <span class="style-emoji" aria-hidden="true">{{ s.emoji }}</span>
+          <span class="style-body">
+            <strong>{{ s.title }}</strong>
+            <span class="style-desc">{{ s.desc }}</span>
+          </span>
+        </button>
+      </div>
+
+      <div v-if="showGroupControls" class="row group-row">
         <label class="field">
-          <span>{{ t('host.setup.groups') }}</span>
+          <span>{{ countLabel }}</span>
           <select v-model.number="config.groupCount">
-            <option v-for="n in 6" :key="n" :value="n">{{ n }}</option>
+            <option v-for="n in countOptions" :key="n" :value="n">{{ n }}</option>
           </select>
         </label>
         <label class="field">
-          <span>{{ t('host.setup.groupSize') }}</span>
+          <span>{{ sizeLabel }}</span>
           <select v-model.number="config.groupSize">
-            <option v-for="n in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]" :key="n" :value="n">{{ n }}</option>
+            <option v-for="n in sizeOptions" :key="n" :value="n">{{ n }}</option>
           </select>
         </label>
       </div>
+
+      <p class="hint cap-hint">{{ capacityHint }}</p>
     </div>
 
-    <div class="card rise" style="animation-delay: 130ms">
+    <!-- Game options -->
+    <div class="card rise" style="animation-delay: 150ms">
       <h2>{{ t('host.setup.gameLabel') }}</h2>
       <div class="row">
-        <label class="field">
-          <span>{{ t('host.setup.mode') }}</span>
-          <select v-model="config.mode">
-            <option value="team">{{ t('host.setup.modeTeam') }}</option>
-            <option value="groups">{{ t('host.setup.modeGroups') }}</option>
-          </select>
-        </label>
         <label class="field">
           <span>{{ t('host.setup.wordPack') }}</span>
           <select v-model="config.packId">
@@ -92,16 +172,11 @@ async function create() {
         <span>{{ t('host.setup.mrWhite') }}</span>
         <span class="toggle-hint">{{ t('host.setup.mrWhiteHint') }}</span>
       </label>
-      <p class="hint">
-        1 undercover {{ config.mode === 'team' ? 'team' : 'player' }} ·
-        Mr White {{ config.includeMrWhite ? 'on' : 'off' }}.
-        {{ config.mode === 'team' ? t('host.setup.hintTeam') : '' }}
-      </p>
     </div>
 
     <p v-if="host.error" class="error" role="alert">{{ host.error }}</p>
 
-    <div class="start rise" style="animation-delay: 170ms">
+    <div class="start rise" style="animation-delay: 180ms">
       <BaseButton variant="accent" size="lg" block :disabled="creating" @click="create">
         {{ creating ? t('host.setup.creating') : t('host.setup.create') }}
       </BaseButton>
@@ -130,6 +205,10 @@ async function create() {
   flex-wrap: wrap;
 }
 
+.group-row {
+  margin-top: 14px;
+}
+
 .field {
   display: grid;
   gap: 4px;
@@ -156,6 +235,64 @@ async function create() {
 .field select:focus {
   outline: none;
   border-color: var(--violet-600);
+}
+
+/* ── Play-style cards ───────────────────────── */
+.styles {
+  display: grid;
+  gap: 10px;
+}
+
+@media (min-width: 640px) {
+  .styles {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.style {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  text-align: left;
+  background: var(--surface);
+  border-radius: var(--radius-m);
+  box-shadow: inset 0 0 0 2px var(--line);
+  padding: 14px;
+  transition:
+    box-shadow var(--t-fast),
+    background var(--t-fast),
+    transform var(--t-fast) var(--ease-pop);
+}
+
+.style:hover {
+  transform: translateY(-2px);
+}
+
+.style.active {
+  box-shadow: inset 0 0 0 3px var(--violet-600);
+  background: var(--violet-050);
+}
+
+.style-emoji {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.style-body {
+  display: grid;
+  gap: 3px;
+}
+
+.style-body strong {
+  font-size: 0.98rem;
+  color: var(--ink);
+}
+
+.style-desc {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  line-height: 1.35;
 }
 
 .toggle {
@@ -188,6 +325,10 @@ async function create() {
   color: var(--ink-soft);
   font-size: 0.85rem;
   margin: 12px 0 0;
+}
+
+.cap-hint {
+  font-weight: 600;
 }
 
 .error {
