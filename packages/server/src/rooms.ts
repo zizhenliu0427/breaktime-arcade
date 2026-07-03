@@ -21,6 +21,7 @@ import {
   eligibleVoters,
   generateRoomCode,
   getWordPack,
+  GROUP_IDS,
   groupIdsFor,
   nextRound,
   nextSpeaker,
@@ -138,7 +139,7 @@ export class RoomManager {
     const merged = { ...DEFAULT_ROOM_CONFIG, ...partial };
     const clamp = (v: number, lo: number, hi: number) =>
       Math.min(Math.max(Math.round(v), lo), hi);
-    const groupCount = clamp(merged.groupCount, 1, 6);
+    const groupCount = clamp(merged.groupCount, 1, GROUP_IDS.length);
     return {
       sessionName: merged.sessionName.trim().slice(0, 40) || DEFAULT_ROOM_CONFIG.sessionName,
       groupCount,
@@ -146,7 +147,10 @@ export class RoomManager {
       groupNames: this.sanitiseGroupNames(merged.groupNames, groupCount),
       mode: merged.mode === 'groups' ? 'groups' : 'team',
       packId: getWordPack(merged.packId) ? merged.packId : DEFAULT_ROOM_CONFIG.packId,
-      undercoverCount: 1,
+      // Upper bound is generous on purpose: whether it's actually seatable
+      // (specials < seatedCount - 1) is checked when the round actually
+      // starts (startTeamGame/startGroupGame already fail soft on this).
+      undercoverCount: clamp(merged.undercoverCount, 1, 5),
       includeMrWhite: !!merged.includeMrWhite,
       discussSeconds: clamp(merged.discussSeconds, 10, 300),
       voteSeconds: clamp(merged.voteSeconds, 10, 120),
@@ -166,15 +170,42 @@ export class RoomManager {
    * that don't invalidate the group/player structure. Changes take effect on
    * the *next* game start (restartGame / startGame); in-progress games keep
    * their current words and roles.
+   *
+   * groupCount/groupSize resize live too, but never below the number of
+   * groups that already have real people seated in them — shrinking never
+   * orphans a currently-occupied group. Growing groupCount materialises the
+   * new empty seats immediately so they show up for the next join/round.
    */
   updateConfig(room: Room, patch: Partial<RoomConfig>): void {
     const safe: Partial<RoomConfig> = {};
     if (patch.includeMrWhite !== undefined) safe.includeMrWhite = !!patch.includeMrWhite;
+    if (patch.undercoverCount !== undefined) safe.undercoverCount = patch.undercoverCount;
     if (patch.discussSeconds !== undefined) safe.discussSeconds = patch.discussSeconds;
     if (patch.voteSeconds !== undefined) safe.voteSeconds = patch.voteSeconds;
     if (patch.packId !== undefined) safe.packId = patch.packId;
     if (patch.sessionName !== undefined) safe.sessionName = patch.sessionName;
+    if (patch.groupSize !== undefined) safe.groupSize = patch.groupSize;
+    if (patch.groupCount !== undefined) {
+      const occupied = [...room.groups.values()].filter((g) => this.groupMembers(room, g.id).length > 0).length;
+      safe.groupCount = Math.max(patch.groupCount, occupied);
+    }
     room.config = this.sanitiseConfig({ ...room.config, ...safe });
+    for (const id of groupIdsFor(room.config)) {
+      if (!room.groups.has(id)) {
+        room.groups.set(id, { id, game: null, memberOrder: [], ready: new Set(), phaseEndsAt: null, timer: null });
+      }
+    }
+  }
+
+  /** Host removes one player. Their room membership ends immediately; if a
+   * game seat already depends on them mid-round, the host can Skip Phase to
+   * move past their turn (same escape hatch already used for disconnects). */
+  removePlayer(room: Room, playerId: string): RoomPlayer | null {
+    const player = room.players.get(playerId);
+    if (!player) return null;
+    room.players.delete(playerId);
+    room.ready.delete(playerId);
+    return player;
   }
 
   /* ── Players ───────────────────────────────────────────────── */
@@ -200,6 +231,13 @@ export class RoomManager {
   }
 
   pickGroup(room: Room, player: RoomPlayer, groupId: string | null): string | { error: string } {
+    // Switching between two different groups once a game is running would leave
+    // the player holding a stale word and skew the seating — block it. A first
+    // pick (no group yet) is always allowed; a late joiner is seated next round.
+    const isSwitch = player.groupId !== null && groupId !== null && groupId !== player.groupId;
+    if (isSwitch && this.gameInProgress(room)) {
+      return { error: "The game has already started — you can't switch teams now." };
+    }
     const counts: Record<string, number> = {};
     for (const p of room.players.values()) {
       if (p.groupId && p.id !== player.id) counts[p.groupId] = (counts[p.groupId] ?? 0) + 1;
@@ -212,6 +250,12 @@ export class RoomManager {
     if ((counts[target] ?? 0) >= room.config.groupSize) return { error: 'That group is full.' };
     player.groupId = target;
     return target;
+  }
+
+  /** True if a round is currently under way (team: the one game; groups: any). */
+  private gameInProgress(room: Room): boolean {
+    if (room.config.mode === 'team') return room.game !== null;
+    return [...room.groups.values()].some((g) => g.game !== null);
   }
 
   groupMembers(room: Room, groupId: string): RoomPlayer[] {
@@ -598,9 +642,11 @@ export class RoomManager {
     return seat ? this.groupOfSeat(room, seat) : null;
   }
   private teamGroupAlive(room: Room, groupId: string): boolean {
-    if (!room.game) return true;
+    if (!room.game) return true; // pre-game: every configured slot shows as an open seat
     const ep = room.game.players.find((p) => p.id === this.seatOfGroup(room, groupId));
-    return ep ? ep.alive : true;
+    // A group with no `ep` was never seated (empty when the game started) — it's
+    // not a real participant, so it must not count as "alive" (vote target, tally, …).
+    return ep ? ep.alive : false;
   }
 
   /** groups mode: memberId -> engine seat id within its group. */
@@ -628,9 +674,15 @@ export class RoomManager {
     for (const g of room.groups.values()) {
       const idx = groupIds.findIndex((x) => x === g.id);
       const memberIds = this.groupMembers(room, g.id).map((p) => p.id);
+      // Solo play (groupSize 1): a "group" IS the one player in it, so show
+      // their own name instead of a generic "Group N" label.
+      const soloName =
+        room.config.groupSize === 1 && memberIds.length === 1
+          ? room.players.get(memberIds[0]!)?.name
+          : undefined;
       groups[g.id] = {
         id: g.id,
-        name: room.config.groupNames[idx] ?? g.id,
+        name: soloName ?? room.config.groupNames[idx] ?? g.id,
         playerCount: memberIds.length,
         memberIds,
         readyMemberIds: memberIds.filter((id) => (room.config.mode === 'team' ? room.ready : g.ready).has(id)),

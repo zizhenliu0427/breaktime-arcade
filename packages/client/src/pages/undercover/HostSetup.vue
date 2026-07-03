@@ -2,7 +2,7 @@
 import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { DEFAULT_ROOM_CONFIG, wordPacks } from '@arcade/shared';
+import { DEFAULT_ROOM_CONFIG, GROUP_IDS, wordPacks } from '@arcade/shared';
 import BaseButton from '../../components/ui/BaseButton.vue';
 import { useOnlineHostStore } from '../../stores/onlineHost';
 
@@ -24,6 +24,9 @@ const creating = ref(false);
  */
 type PlayStyle = 'solo' | 'teams' | 'parallel';
 
+/** Above this, solo turn-taking (everyone speaks + votes one at a time) gets slow. */
+const SOLO_COMFORTABLE_MAX = 12;
+
 function styleFromConfig(): PlayStyle {
   if (config.mode === 'groups') return 'parallel';
   return config.groupSize <= 1 ? 'solo' : 'teams';
@@ -41,7 +44,7 @@ function setStyle(s: PlayStyle) {
   if (s === 'solo') {
     config.mode = 'team';
     config.groupSize = 1;
-    config.groupCount = 6; // up to 6 individual seats
+    if (config.groupCount < 3) config.groupCount = 6;
   } else if (s === 'teams') {
     config.mode = 'team';
     if (config.groupSize < 2) config.groupSize = 6;
@@ -53,7 +56,8 @@ function setStyle(s: PlayStyle) {
   }
 }
 
-const showGroupControls = computed(() => playStyle.value !== 'solo');
+const showGroupControls = computed(() => playStyle.value === 'teams' || playStyle.value === 'parallel');
+const showSoloControl = computed(() => playStyle.value === 'solo');
 const countLabel = computed(() =>
   playStyle.value === 'parallel' ? t('host.setup.numGroups') : t('host.setup.numTeams'),
 );
@@ -64,9 +68,11 @@ const countOptions = computed(() => (playStyle.value === 'parallel' ? [1, 2, 3, 
 const sizeOptions = computed(() =>
   playStyle.value === 'parallel' ? [3, 4, 5, 6, 7, 8, 9, 10] : [2, 3, 4, 5, 6, 7, 8, 9, 10],
 );
+const soloCountOptions = computed(() => Array.from({ length: GROUP_IDS.length - 2 }, (_, i) => i + 3)); // 3..24
+const soloTooLarge = computed(() => playStyle.value === 'solo' && config.groupCount > SOLO_COMFORTABLE_MAX);
 
 const capacityHint = computed(() => {
-  if (playStyle.value === 'solo') return t('host.setup.capSolo');
+  if (playStyle.value === 'solo') return t('host.setup.capSolo', { n: config.groupCount });
   const total = config.groupCount * config.groupSize;
   return playStyle.value === 'parallel'
     ? t('host.setup.capParallel', { groups: config.groupCount, size: config.groupSize, total })
@@ -139,7 +145,17 @@ async function create() {
         </label>
       </div>
 
+      <div v-if="showSoloControl" class="row group-row">
+        <label class="field">
+          <span>{{ t('host.setup.numPlayers') }}</span>
+          <select v-model.number="config.groupCount">
+            <option v-for="n in soloCountOptions" :key="n" :value="n">{{ n }}</option>
+          </select>
+        </label>
+      </div>
+
       <p class="hint cap-hint">{{ capacityHint }}</p>
+      <p v-if="soloTooLarge" class="hint solo-warning">⚠️ {{ t('host.setup.soloLargeWarning') }}</p>
     </div>
 
     <!-- Game options -->
@@ -152,6 +168,12 @@ async function create() {
             <option v-for="pack in wordPacks" :key="pack.id" :value="pack.id">
               {{ pack.name }}
             </option>
+          </select>
+        </label>
+        <label class="field">
+          <span>{{ t('host.setup.undercoverCount') }}</span>
+          <select v-model.number="config.undercoverCount">
+            <option v-for="n in [1, 2, 3]" :key="n" :value="n">{{ n }}</option>
           </select>
         </label>
         <label class="field">
@@ -325,6 +347,11 @@ async function create() {
   color: var(--ink-soft);
   font-size: 0.85rem;
   margin: 12px 0 0;
+}
+
+.solo-warning {
+  color: var(--accent-press);
+  font-weight: 700;
 }
 
 .cap-hint {

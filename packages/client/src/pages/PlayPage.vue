@@ -29,20 +29,22 @@ const remaining = computed(() => seconds.value ?? ringTotal.value);
 
 const groups = computed(() => (player.room ? Object.values(player.room.groups) : []));
 const capacity = computed(() => player.room?.config.groupSize ?? 6);
+// Solo play (groupSize 1): each "group" is one player — talk about players, not teams.
+const isSolo = computed(() => player.mode === 'team' && (player.room?.config.groupSize ?? 0) === 1);
 const aliveLabel = computed(() => {
   if (!player.room) return '';
   if (player.mode === 'team') {
     const n = Object.values(player.room.groups).filter((g) => g.alive).length;
-    return t('game.teamsIn', { n });
+    return isSolo.value ? t('game.playersIn', { n }) : t('game.teamsIn', { n });
   }
   return t('game.playersIn', { n: player.groupMembers.filter((p) => p.alive).length });
 });
 const revealReady = computed(() => player.myGroup?.readyMemberIds.length ?? 0);
 const revealTotal = computed(() => player.myGroup?.playerCount ?? 0);
-const voteLabel = computed(() => (player.mode === 'team' ? t('game.vLabelTeams') : t('game.vLabelPlayers')));
+const voteLabel = computed(() => (player.mode === 'team' && !isSolo.value ? t('game.vLabelTeams') : t('game.vLabelPlayers')));
 
 function roleLabel(role: string): string {
-  if (player.mode === 'team') {
+  if (player.mode === 'team' && !isSolo.value) {
     return role === 'undercover' ? t('game.roleUndercoverTeam') : role === 'mrWhite' ? t('game.roleMrWhiteTeam') : t('game.roleCivilianTeam');
   }
   return role === 'undercover' ? t('game.roleUndercoverPlayer') : role === 'mrWhite' ? t('game.roleMrWhitePlayer') : t('game.roleCivilianPlayer');
@@ -56,6 +58,20 @@ watch(() => player.phase, () => {
   choice.value = null;
 });
 
+// Team switching: after auto/manual assignment, players in real-team modes can
+// re-open the group picker until their game starts. Solo has nothing to pick.
+const switchingTeam = ref(false);
+const gameStartedForMe = computed(() =>
+  player.mode === 'team' ? !!player.room?.started : player.myGroup?.phase != null,
+);
+const canPickTeam = computed(() => !isSolo.value && !gameStartedForMe.value);
+const showLobby = computed(
+  () => !!player.me && (player.me.groupId === null || switchingTeam.value),
+);
+watch(gameStartedForMe, (started) => {
+  if (started) switchingTeam.value = false;
+});
+
 const isSelfVote = computed(() => {
   if (!choice.value) return false;
   return player.voteTargets.find((t) => t.id === choice.value)?.isSelf ?? false;
@@ -63,6 +79,7 @@ const isSelfVote = computed(() => {
 
 function pickGroup(id: string | null) {
   void player.pickGroup(id);
+  switchingTeam.value = false;
 }
 
 function confirmVote() {
@@ -107,9 +124,10 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
 
     <template v-else>
       <div v-if="player.myGroup" class="statusbar">
-        <span class="pill">{{ t('game.teamPill', { name: player.myGroup.name }) }}</span>
+        <span v-if="!isSolo" class="pill">{{ t('game.teamPill', { name: player.myGroup.name }) }}</span>
         <span v-if="player.room?.started && player.phase !== 'reveal'" class="pill">{{ t('host.room.roundNum', { n: player.round }) }}</span>
         <span class="alive">{{ aliveLabel }}</span>
+        <button v-if="canPickTeam && !switchingTeam" class="switch-team" type="button" @click="switchingTeam = true">{{ t('game.changeTeam') }}</button>
         <button class="quit" type="button" @click="leave">{{ t('player.leave') }}</button>
       </div>
 
@@ -120,7 +138,7 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
         <section v-if="!player.me" key="loading" class="loading">{{ t('game.connecting') }}</section>
 
         <!-- lobby: pick a team -->
-        <section v-else-if="player.me.groupId === null" key="lobby" class="stage lobby pop">
+        <section v-else-if="showLobby" key="lobby" class="stage lobby pop">
           <h2>{{ t('game.welcomeName', { name: player.name }) }}</h2>
           <p class="sub">{{ t('game.pickTeam') }}</p>
           <div class="group-grid">
@@ -129,16 +147,18 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
               :key="g.id"
               type="button"
               class="group-pick"
-              :class="[`g-${g.id.toLowerCase()}`, { full: g.playerCount >= capacity }]"
-              :disabled="g.playerCount >= capacity"
+              :class="[`g-${g.id.toLowerCase()}`, { full: g.playerCount >= capacity && player.me.groupId !== g.id, current: player.me.groupId === g.id }]"
+              :disabled="g.playerCount >= capacity && player.me.groupId !== g.id"
               @click="pickGroup(g.id)"
             >
               <span class="gp-name">{{ g.name }}</span>
               <span class="gp-count">{{ g.playerCount }}/{{ capacity }}</span>
-              <span v-if="g.playerCount >= capacity" class="gp-full">{{ t('game.full') }}</span>
+              <span v-if="player.me.groupId === g.id" class="gp-full">{{ t('game.yourTeam') }}</span>
+              <span v-else-if="g.playerCount >= capacity" class="gp-full">{{ t('game.full') }}</span>
             </button>
           </div>
           <BaseButton variant="ghost" block @click="pickGroup(null)">{{ t('game.assignTeam') }}</BaseButton>
+          <BaseButton v-if="switchingTeam && player.me.groupId" variant="ghost" block @click="switchingTeam = false">{{ t('game.cancelSwitch') }}</BaseButton>
         </section>
 
         <!-- reveal: hold to see the word (team: shared; groups: your own) -->
@@ -240,7 +260,7 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
           <h2>{{ t('game.castYourVote') }}</h2>
           <template v-if="player.canIVote">
             <p class="sub">
-              {{ player.mode === 'team' ? t('game.whoIsUndercoverTeam') : t('game.whoIsUndercoverPlayer') }}
+              {{ player.mode === 'team' && !isSolo ? t('game.whoIsUndercoverTeam') : t('game.whoIsUndercoverPlayer') }}
             </p>
             <div class="targets" role="radiogroup" aria-label="Vote">
               <button
@@ -311,9 +331,9 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
           </div>
           <div class="result">
             <div class="trophy" aria-hidden="true">{{ player.civiliansWin ? '😇' : '🕵️' }}</div>
-            <h2>{{ player.civiliansWin ? t('game.theCiviliansWin') : (player.mode === 'team' ? t('game.theUndercoverTeamWins') : t('game.theUndercoverWins')) }}</h2>
+            <h2>{{ player.civiliansWin ? t('game.theCiviliansWin') : (player.mode === 'team' && !isSolo ? t('game.theUndercoverTeamWins') : t('game.theUndercoverWins')) }}</h2>
             <p v-if="player.undercoverId" class="reveal-line">
-              {{ t('game.undercoverWas', { label: player.mode === 'team' ? t('game.vLabelTeams') : t('game.vLabelPlayers'), name: player.nameOf(player.undercoverId) }) }}
+              {{ t('game.undercoverWas', { label: voteLabel, name: player.nameOf(player.undercoverId) }) }}
             </p>
             <div class="words">
               <div class="word-box civ">
@@ -370,6 +390,22 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
   padding: 4px;
 }
 
+.switch-team {
+  background: var(--violet-050);
+  color: var(--violet-800);
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 999px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background var(--t-fast);
+}
+
+.switch-team:hover {
+  background: var(--violet-100);
+}
+
 .error {
   color: var(--danger);
   font-weight: 700;
@@ -421,6 +457,10 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
 .group-pick:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.group-pick.current {
+  box-shadow: 0 0 0 3px var(--violet-600), var(--shadow-m);
 }
 
 .g-a { border-top-color: var(--group-a); }

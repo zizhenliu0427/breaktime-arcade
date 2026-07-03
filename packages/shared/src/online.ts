@@ -50,7 +50,10 @@ export const DEFAULT_ROOM_CONFIG: RoomConfig = {
   voteSeconds: 20,
 };
 
-export const GROUP_IDS = ['A', 'B', 'C', 'D', 'E', 'F'] as const;
+export const GROUP_IDS = [
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+  'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+] as const;
 export type GroupId = (typeof GROUP_IDS)[number];
 
 export function groupIdsFor(config: Pick<RoomConfig, 'groupCount'>): GroupId[] {
@@ -203,4 +206,5 @@ export type HostAction =
   | { type: 'nextRound'; groupId?: string }
   | { type: 'restartGame'; groupId?: string }
   | { type: 'updateConfig'; config: Partial<RoomConfig> }
+  | { type: 'kickPlayer'; playerId: string }
   | { type: 'endRoom' };

@@ -20,7 +20,7 @@ The experience is modelled on **Kahoot**: the host runs the game from a computer
 
 | Game | Status | Players / Length |
 |---|---|---|
-| **Who's Undercover?** | ✅ In development (first title) | 4–10 players / 5–10 min |
+| **Who's Undercover?** | ✅ In development (first title) | 3–24 players / 5–10 min |
 | Last Card (original UNO-style) | 🔒 Coming soon | 2–8 players |
 | Draw & Guess | 🔒 Coming soon | — |
 | Charades | 🔒 Coming soon | — |
@@ -36,6 +36,23 @@ The home page presents everything as a collection; unfinished games show **Comin
 - **Host a Live Room** — the presenter runs the game from a computer; players join on their own devices (LAN / public, see Networking below).
 - **Pass & Play** — one group shares a single device and takes turns viewing their word. Works offline; the most reliable fallback.
 - **Presenter Demo** — a projector-only walkthrough of the rules that hands out no real secret information.
+- **Auto-Simulate** — one person, god view: the real rule engine plus bots play a whole round automatically (play / pause / step / speed) — handy for rehearsing or explaining the flow.
+
+### Live Room — how you're playing
+
+Setup asks *"How are you playing?"* and maps your answer onto the room underneath — small groups never have to think in "groups × players":
+
+- **Individuals** — everyone plays as themselves in one game (3–24 players); find the one undercover. Each player is labelled by their own name.
+- **Teams vs teams** — split into teams; each team shares a word and speaks/votes as one unit (first vote locks); find the undercover team.
+- **Parallel groups** — each group plays its own separate game at the same time; every group finds its own undercover.
+
+In **Teams vs teams** and **Parallel groups**, players **pick their own team** on joining (or tap *Assign me* to auto-balance) and can **change team until the game starts**.
+
+### Live host controls (no need to restart the room)
+
+- Adjust the **number of undercovers**, toggle **Mr White**, change **word pack** and **timers** — applied on the next round.
+- **Resize** the room (team/group count and size) on the fly — never shrinking below groups that already have players in them.
+- **Remove a player** from the roster; add players any time by having them scan the code.
 
 ---
 
@@ -47,7 +64,7 @@ The overall feel is **bright, lively and classroom-friendly, in the spirit of Ka
 - Large rounded corners, big buttons, high-contrast colour blocks — legible from the back of the room on a projector.
 - A restrained primary + accent palette, with light gradients and subtle depth (shadows / lift), not piled-on decoration.
 - Four fixed group colours carried throughout (so groups read at a glance on the projector):
-  - `Group A` red · `Group B` blue · `Group C` yellow · `Group D` green
+  - `Group A` red · `Group B` blue · `Group C` yellow · `Group D` green — further groups (E … X, up to 24) fall back to violet shades.
 - Clear typography, generous whitespace, obvious information hierarchy.
 
 **Motion (used sparingly)**

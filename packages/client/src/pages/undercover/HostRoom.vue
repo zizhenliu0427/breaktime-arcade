@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router';
 import QRCode from 'qrcode';
 import { useI18n } from 'vue-i18n';
 import type { LocalPhase, PublicGroupState, Role } from '@arcade/shared';
-import { wordPacks } from '@arcade/shared';
+import { GROUP_IDS, wordPacks } from '@arcade/shared';
 import BaseButton from '../../components/ui/BaseButton.vue';
 import { useOnlineHostStore } from '../../stores/onlineHost';
 
@@ -73,7 +73,17 @@ function winnerLabel(g: PublicGroupState): string {
 }
 
 const mode = computed(() => host.room?.config.mode);
+// Solo play (groupSize 1): each "group" is one player — talk about players, not teams.
+const isSolo = computed(() => mode.value === 'team' && host.room?.config.groupSize === 1);
 const joinedCount = computed(() => host.room?.players.length ?? 0);
+/** Live resize options (settings panel). Server clamps below the occupied-group floor. */
+const liveCountOptions = computed(() => GROUP_IDS.map((_, i) => i + 1));
+const liveSizeOptions = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+const countLabel = computed(() => {
+  if (isSolo.value) return t('host.setup.numPlayers');
+  return mode.value === 'groups' ? t('host.setup.numGroups') : t('host.setup.numTeams');
+});
+const sizeLabel = computed(() => (mode.value === 'groups' ? t('host.setup.perGroup') : t('host.setup.perTeam')));
 const canStart = computed(() => {
   const r = host.room;
   if (!r) return false;
@@ -117,6 +127,11 @@ async function endRoom() {
   if (!window.confirm(t('host.room.confirmEndRoom'))) return;
   router.replace('/undercover');
   void host.endRoom();
+}
+
+function kickPlayer(playerId: string, name: string) {
+  if (!window.confirm(t('host.room.confirmKick', { name }))) return;
+  void host.action({ type: 'kickPlayer', playerId });
 }
 </script>
 
@@ -195,6 +210,33 @@ async function endRoom() {
             </select>
           </label>
           <label class="sfield">
+            <span>{{ t('host.setup.undercoverCount') }}</span>
+            <select
+              :value="host.room.config.undercoverCount"
+              @change="host.action({ type: 'updateConfig', config: { undercoverCount: Number(($event.target as HTMLSelectElement).value) } })"
+            >
+              <option v-for="n in [1, 2, 3]" :key="n" :value="n">{{ n }}</option>
+            </select>
+          </label>
+          <label class="sfield">
+            <span>{{ countLabel }}</span>
+            <select
+              :value="host.room.config.groupCount"
+              @change="host.action({ type: 'updateConfig', config: { groupCount: Number(($event.target as HTMLSelectElement).value) } })"
+            >
+              <option v-for="n in liveCountOptions" :key="n" :value="n">{{ n }}</option>
+            </select>
+          </label>
+          <label v-if="!isSolo" class="sfield">
+            <span>{{ sizeLabel }}</span>
+            <select
+              :value="host.room.config.groupSize"
+              @change="host.action({ type: 'updateConfig', config: { groupSize: Number(($event.target as HTMLSelectElement).value) } })"
+            >
+              <option v-for="n in liveSizeOptions" :key="n" :value="n">{{ n }}</option>
+            </select>
+          </label>
+          <label class="sfield">
             <span>Discussion</span>
             <select
               :value="host.room.config.discussSeconds"
@@ -214,7 +256,9 @@ async function endRoom() {
           </label>
         </div>
         <p class="settings-status">
+          Undercovers: {{ host.room?.config.undercoverCount }} ·
           Mr White: {{ host.room?.config.includeMrWhite ? '✅ On' : '❌ Off' }} ·
+          {{ isSolo ? 'Players' : (mode === 'groups' ? 'Groups' : 'Teams') }}: {{ host.room?.config.groupCount }}{{ !isSolo ? ` × ${host.room?.config.groupSize}` : '' }} ·
           Pack: {{ wordPacks.find(p => p.id === host.room?.config.packId)?.name ?? host.room?.config.packId }} ·
           Discuss: {{ host.room?.config.discussSeconds }}s ·
           Vote: {{ host.room?.config.voteSeconds }}s
@@ -236,27 +280,30 @@ async function endRoom() {
         </div>
         <p v-if="host.room.phase === 'reveal'" class="prog-line">🔐 {{ t('host.room.membersReady', { ready: readyTotal, total: memTotal }) }}</p>
         <p v-else-if="host.room.currentSpeakerGroupId" class="prog-line">
-          🎤 {{ t('host.room.speakingTeam', { name: host.room.groups[host.room.currentSpeakerGroupId]?.name }) }}
+          🎤 {{ t(isSolo ? 'host.room.speakingPlayer' : 'host.room.speakingTeam', { name: host.room.groups[host.room.currentSpeakerGroupId]?.name }) }}
         </p>
         <p v-else-if="host.room.phase === 'vote'" class="prog-line">
-          🗳 {{ t('host.room.votedTeams', { voted: host.room.votesIn, total: host.room.votersTotal }) }}
+          🗳 {{ t(isSolo ? 'host.room.votedPlayers' : 'host.room.votedTeams', { voted: host.room.votesIn, total: host.room.votersTotal }) }}
           <span v-if="host.room.isRunoffVote" class="tag">{{ t('host.room.runoffVote') }}</span>
         </p>
         <p v-else-if="host.room.phase === 'elimination'" class="prog-line">
           {{
             host.room.lastElimination
-              ? t('host.room.votedOutTeam', { name: host.room.groups[host.room.lastElimination.groupId]?.name, role: roleLabel(host.room.lastElimination.role) })
-              : t('host.room.tieNoElimination')
+              ? t(isSolo ? 'host.room.votedOutPlayer' : 'host.room.votedOutTeam', { name: host.room.groups[host.room.lastElimination.groupId]?.name, role: roleLabel(host.room.lastElimination.role) })
+              : t(isSolo ? 'host.room.tieNoEliminationPlayer' : 'host.room.tieNoElimination')
           }}
         </p>
         <p v-else-if="host.room.phase === 'ended'" class="prog-line win">
-          {{ host.room.winner === 'civilians' ? t('host.room.civilianTeamsWin') : t('host.room.undercoverTeamWins') }}
+          {{ host.room.winner === 'civilians' ? t(isSolo ? 'host.room.winCivilians' : 'host.room.civilianTeamsWin') : t(isSolo ? 'host.room.winUndercover' : 'host.room.undercoverTeamWins') }}
         </p>
       </div>
 
       <p v-if="unassigned.length" class="card unassigned rise">
         <strong>{{ t('host.room.choosingTeam') }}</strong>
-        <span v-for="p in unassigned" :key="p.id" class="chip">{{ p.name }}</span>
+        <span v-for="p in unassigned" :key="p.id" class="chip">
+          {{ p.name }}
+          <button type="button" class="kick-btn" :title="t('host.room.kick')" @click="kickPlayer(p.id, p.name)">✕</button>
+        </span>
       </p>
 
       <!-- Team cards -->
@@ -308,6 +355,7 @@ async function endRoom() {
               {{ host.playerById(pid)?.name }}
               <span v-if="answersRevealed && mode === 'team' && teamGroupRole(g.id)" class="reveal-tag">{{ roleLabel(teamGroupRole(g.id)) }}</span>
               <span v-if="answersRevealed && mode === 'groups' && groupMemberRole(g.id, pid)" class="reveal-tag">{{ roleLabel(groupMemberRole(g.id, pid)) }}</span>
+              <button type="button" class="kick-btn" :title="t('host.room.kick')" @click="kickPlayer(pid, host.playerById(pid)?.name ?? '')">✕</button>
             </li>
           </ul>
 
@@ -471,12 +519,33 @@ async function endRoom() {
 }
 
 .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: var(--violet-050);
   color: var(--violet-800);
   font-weight: 700;
   border-radius: 999px;
-  padding: 4px 12px;
+  padding: 4px 8px 4px 12px;
   font-size: 0.85rem;
+}
+
+.kick-btn {
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color var(--t-fast), background var(--t-fast);
+}
+
+.kick-btn:hover {
+  color: #fff;
+  background: var(--danger);
 }
 
 .groups {

@@ -324,7 +324,7 @@ onUnmounted(() => {
       <div class="card setup-card rise" style="animation-delay: 90ms">
         <label class="field">
           <span class="field-label">{{ t('sim.players') }}: <strong>{{ playerCount }}</strong></span>
-          <input v-model.number="playerCount" type="range" min="4" max="10" step="1" />
+          <input v-model.number="playerCount" type="range" min="3" max="10" step="1" />
         </label>
 
         <label class="field">

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_ROOM_CONFIG,
   generateRoomCode,
+  GROUP_IDS,
   groupIdsFor,
   normaliseRoomCode,
   pickAutoGroup,
@@ -26,10 +27,10 @@ describe('room codes', () => {
 });
 
 describe('groupIdsFor', () => {
-  it('returns the configured number of groups, clamped to A–F', () => {
+  it('returns the configured number of groups, clamped to the GROUP_IDS ceiling', () => {
     expect(groupIdsFor({ groupCount: 4 })).toEqual(['A', 'B', 'C', 'D']);
     expect(groupIdsFor({ groupCount: 6 })).toEqual(['A', 'B', 'C', 'D', 'E', 'F']);
-    expect(groupIdsFor({ groupCount: 99 })).toEqual(['A', 'B', 'C', 'D', 'E', 'F']);
+    expect(groupIdsFor({ groupCount: 99 })).toEqual([...GROUP_IDS]);
     expect(groupIdsFor({ groupCount: 0 })).toEqual(['A']);
   });
 });

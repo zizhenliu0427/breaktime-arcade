@@ -1,6 +1,20 @@
 # HANDOFF — Breaktime Arcade
 
-> 给下一个会话的交接文档。最后更新：2026-07-03（新增 Auto-Simulate 自动模拟模式 + 语言切换器显示当前语言 + 修复构建 bug + 本地公网部署跑通）。
+> 给下一个会话的交接文档。最后更新：2026-07-03（晚间会话：solo 体验修复 + 房间容量提到 24 + 现场可编辑卧底数/容量/踢人 + 恢复"玩家自选小组" + 去掉 team 残留文案）。
+
+## ⚠️ 本次会话改动（晚间，尚未 commit——建议一次性提交）
+
+全部 typecheck 三包过、26/26 单测过、生产构建过、socket 冒烟脚本端到端验过（team 自选组+开局后禁止换组、solo 自动分配+用玩家名显示、卧底数 live 改、容量缩容不越占用地板、踢人）。server 已用最新构建在 `PORT=3211` 重启，公网隧道仍在转发。建议 commit message：`feat: live room config editing (undercovers/resize/kick) + player-pick-team + solo UX fixes`。
+
+1. **Simulate 最少人数 4→3**（`AutoSimulate.vue` 滑杆 `min`）——匹配引擎真实下限（1 卧底+2 平民）。
+2. **修 solo "幽灵空组"投票 bug**：`rooms.ts` `teamGroupAlive()` 对"从未坐进去的空组"曾错误默认 `alive:true`，导致空组混进投票目标/"N teams in"计数。改成默认 `false`（一处修好投票列表+计数两处）。
+3. **Solo 不再叫 "Group N"**：`publicState()` 检测 `groupSize===1` 且组内恰好 1 真人时，显示名用该玩家自己的名字。玩家端（`PlayPage`）+ host 端（`HostRoom`）的"团队"用语在 solo 下切到"个人版"文案 key（`isSolo` 判断，复用已有 en/zh 键）——**team 残留文案已清干净**。
+4. **房间容量 6→24**：`GROUP_IDS` 从 A–F 扩到 A–X（24 个），server clamp 跟着放开。solo 人数下拉 3–24；**超过 12 人显示橙色警告**建议改 teams/parallel（`SOLO_COMFORTABLE_MAX=12`）。E 组以后无固定色，用紫色系兜底（`tokens.css`/`HostRoom` 的 `.group-e/.group-f` 仍在，更多组落到默认 `--line`/紫）。
+5. **现场可编辑（不重开房间，team 和 groups 都支持）**：新增 `HostAction` 分支——
+   - `undercoverCount` 现在可配（`sanitiseConfig` clamp 1–5；HostSetup 建房时 1–3 下拉；HostRoom 设置面板也能改）。**注意**：之前 online 把它硬写死 1，现已解禁；能不能真的坐下由 `startTeamGame/startGroupGame` 的 try/catch 兜底（specials≥seat-1 会 soft-fail 不崩）。
+   - `updateConfig` 白名单加了 `undercoverCount/groupCount/groupSize`；`groupCount` 缩容时取 `max(目标, 已占用组数)`——**绝不孤立已有玩家**；扩容立即补建空组 map。设置面板加了对应下拉。
+   - **新增 `kickPlayer` 动作**：`removePlayer()` 删玩家 + 给被踢 socket 发 `room:closed`（复用玩家端已有的 closed 界面）。HostRoom 的未分组 chip 和每个组成员列表旁都有 `✕` 按钮（confirm 二次确认）。
+6. **恢复"玩家自己选小组"**（team vs team / parallel）：join 时**只有 solo（groupSize===1）自动分配**，其余模式留空 `groupId` → 落到 `PlayPage` 大厅自己选组。加了 statusbar「换组」按钮 + `switchingTeam` 本地态，**开局前**可反复换（当前组高亮 `.current`）；开局后 server 端 `pickGroup` 用 `gameInProgress()` 守卫**禁止换组**（首次选/迟到者补位仍允许）。之前 join 无条件 `pickGroup(null)` 是"为测试省事"，现已改。这也**顺带定了 HANDOFF 之前挂起的组名悬念**。
 
 ## 项目是什么
 
@@ -17,12 +31,12 @@
 
 Pass & Play 仍可玩；**Online Room 后端 + Host Dashboard + 玩家端全部接通**，单机已验证（typecheck 三包过、26/26 单测过、生产构建过、server 冒烟过、两种模式 smoke 过）。**Presenter Demo** 已上线（`/undercover/demo`）。**Auto-Simulate 自动模拟** 已上线（`/undercover/simulate`）。**部署**：`start-tunnel.ps1`（方案 A）+ `render.yaml`（方案 B）就绪。**防护**：创房 5次/分/IP、加入 30次/分/IP 限速（`rateLimiter.ts`）；`trust proxy` 已配。
 
-**⚠️ 2026-07-03 本次会话改动（尚未 commit，建议一次性提交）：**
-- **修复构建 bug**：上一次 i18n 提交（`6110329`）误删了 `PassPlaySetup.vue` 和 `HostRoom.vue` 开头的 `<script setup lang="ts">` 标签，导致 `pnpm build` 直接失败。已补回，构建恢复正常。提交此修复用：`fix: restore missing <script setup> tag in PassPlaySetup and HostRoom`。
+**2026-07-03 白天会话改动（已并入 commit `94ae639`）：**
+- **修复构建 bug**：上一次 i18n 提交（`6110329`）误删了 `PassPlaySetup.vue` 和 `HostRoom.vue` 开头的 `<script setup lang="ts">` 标签，导致 `pnpm build` 直接失败。已补回。
 - **语言切换器改为显示当前语言**：右上角按钮从"显示要切换到的目标语言"改为**显示当前语言**（英文界面显 `EN`，中文界面显 `中文`），点击行为不变。`App.vue` 用当前 `locale` 计算标签。顺手删掉了已无引用的 `nav.langSwitch` 翻译键（en/zh）。
 - **新增 Auto-Simulate 自动模拟模式**（`/undercover/simulate`，`pages/undercover/AutoSimulate.vue`）：一个人单机、上帝视角，用**真实规则引擎 + 机器人**自动跑完整一局（发词→逐个线索→讨论倒计时→机器人投票带箭头/计票→淘汰揭身份→下一轮→胜负），无需多设备/多人。可播放/暂停/单步、0.5×–4× 调速、重来、返回设置；右侧实时战报日志；可配玩家数(4–10)/卧底数/Mr White/词库；中英双语。机器人策略：卧底投平民、平民约 55% 概率怀疑到卧底。复用 `@arcade/shared` 引擎纯函数，机器人逻辑在页面内。首页(`UndercoverHome.vue`)第 5 张卡片，**Presenter Demo 原样保留**。
 - **本地公网部署已跑通**：`PORT=3211 pnpm start` + Cloudflare Quick Tunnel（`cloudflared`，winget 已装）。⚠️ Quick Tunnel 的 URL **每次重启随机、关机即断**，仅临时用；固定短域名需自有域名走 Cloudflare 命名隧道，或方案 B（Render）。用户已确认展示走"Cloudflare 长域名 + 二维码扫码"（无警告页最省事）。
-- **HostSetup 改为「意图优先」**：默认会话名 `PY Icebreaker` → **`Undercover Party`**（`DEFAULT_ROOM_CONFIG`，改了 shared 需重启 server）。设置页顶部新增「你们打算怎么玩？」三选一卡片，映射到底层 `mode/groupCount/groupSize`，**小班不再纠结"组数×人数"**：`solo`(每人独立=team+groupSize1+groupCount6，≤6 人) / `teams`(组间对抗=team+size>1) / `parallel`(多组并行=groups)。选 solo 时隐藏组数/人数控件；选 teams/parallel 才显示，且标签随之变（队伍/小组）。底部有容量说明句。移除了原来的 `Mode` 下拉（现由 play style 驱动）。底层模型零改动，规则/server 全复用。`host.setup.*` 加了 playStyle/style*/num*/per*/cap* 一批键（en+zh）。
+- **HostSetup 改为「意图优先」**：默认会话名 `PY Icebreaker` → **`Undercover Party`**（`DEFAULT_ROOM_CONFIG`，改了 shared 需重启 server）。设置页顶部新增「你们打算怎么玩？」三选一卡片，映射到底层 `mode/groupCount/groupSize`，**小班不再纠结"组数×人数"**：`solo`(每人独立=team+groupSize1) / `teams`(组间对抗=team+size>1) / `parallel`(多组并行=groups)。选 solo 时显示"玩家人数"下拉（**晚间会话已把 solo 上限从 6 提到 24**，>12 有警告）；选 teams/parallel 才显示组数/人数，且标签随之变（队伍/小组）。底部有容量说明句。移除了原来的 `Mode` 下拉（现由 play style 驱动）。底层模型零改动，规则/server 全复用。`host.setup.*` 加了 playStyle/style*/num*/per*/cap*/numPlayers/soloLargeWarning/undercoverCount 一批键（en+zh）。
 
 ```
 packages/
@@ -38,7 +52,7 @@ packages/
 
 **Online Room 全部落地**（Fable 先写 server/shared/Host 端；接力补齐玩家端 + 双模式 + 移动端 + 一堆 bugfix）：
 - **shared**：`online.ts`（`RoomConfig.mode` + `groupNames` + 公开快照/HostState/SecretPayload/房间码/平衡自动分组）+ `events.ts`（强类型事件契约；`Ack` 默认泛型修为 `object`，否则无载荷事件 `ack({ok:true})` 报错）+ `test/online.test.ts`（7 测试）。`game/roles.ts` 最小人数 3→2。
-- **server**：`rooms.ts`（`RoomManager` 双模式：team 一场 game seat=组 / groups 每 group 一场 game seat=成员；服务器权威计时器；分层快照；`startGame` try/catch 防 throw 崩进程；快照成员用 `groupMembers()` 过滤而非缓存的 `memberIds`）+ `handlers.ts`（`you:secret` 点对点 / `host:fullState` 只进 `:host` 频道；**join 即自动平衡分组**；重连重认领）+ `index.ts`（`/health`、`/api/endpoints` 吐 LAN IP）。
+- **server**：`rooms.ts`（`RoomManager` 双模式：team 一场 game seat=组 / groups 每 group 一场 game seat=成员；服务器权威计时器；分层快照；`startGame` try/catch 防 throw 崩进程；快照成员用 `groupMembers()` 过滤而非缓存的 `memberIds`；晚间新增 `removePlayer`/`gameInProgress`/容量地板）+ `handlers.ts`（`you:secret` 点对点 / `host:fullState` 只进 `:host` 频道；**join：solo 自动分组、其余留空让玩家自选**；`kickPlayer` 分支；重连重认领）+ `index.ts`（`/health`、`/api/endpoints` 吐 LAN IP）。
 - **client**：`stores/onlineHost.ts`+`onlinePlayer.ts`（后者 getter 全部按 `mode` 分支：team 读 room 级、groups 读 myGroup 级）+ `lib/socket.ts`+`useCountdown.ts` + `HostSetup.vue`（Mode 选择 + 组名默认 Group N，**不**由 host 配置）+ `HostRoom.vue`（QR、team 显示 room 级进度条 / groups 每组卡片含 game 状态 + per-group Skip/Next/Play again、Reveal answers 默认关+确认、阶段字号放大）+ `JoinPage.vue` + `PlayPage.vue`（全阶段：长按看词松手即隐→线索顺序→讨论倒计时→投票→揭晓翻牌→纸屑；team 组票先到先锁 / groups 每人投）。
 - **接线**：路由 `/undercover/host`、`/undercover/host/room`、`/join/:code`、`/play`；入口卡 "Host a Live Room" 已开；`vite.config.ts` 代理 `/socket.io`(ws)+`/api`→localhost:3000；新依赖 `qrcode`(+types)、`socket.io-client`；`BaseButton` 加 `type` prop（修了 Join 按钮 form submit 不触发的 bug）。
 - **移动端修复**：iOS 不再横向滑动 + Safari 输入框不再出界（`body/html overflow-x:hidden`、flex 链 `min-width:0`、`input/select/textarea width:100%`；去掉 `overflow-x: clip` 双声明坑——不认 clip 的 Safari 会两个都不生效）。
@@ -106,7 +120,7 @@ Online Room 双模式 LAN 单机全通；剩下：
 
 ⚠️ **规则变更**：投票允许自投（2026-07-03），选中自己时有虚线边框 + ⚠️ 警告横幅 + confirm 二次确认。改动：`engine.ts`（eligibleTargets 不再过滤自己）、`onlinePlayer.ts`（voteTargets 加 isSelf）、`PlayPage.vue` + `PhaseVote.vue`（警告 UI）。
 
-⚠️ **组名**：当前默认 `Group 1/2/3/4`（host 不配置）。用户提过「每个人加入时自己写组名，默认 group1234」但**意思未最终确认**（疑似指玩家名 JoinPage 已有、组名默认即可），下次会话先问清再动。
+✅ **组名悬念已解决**（晚间会话）：solo 直接用玩家自己的名字当"组名"；team/parallel 组名仍默认 `Group N`，但玩家加入时**自己选进哪个组**（不是自己命名组）。原来那条"未最终确认"到此作废。
 
 ## 用户偏好（重要）
 

@@ -11,7 +11,11 @@ let socket: ArcadeSocket | null = null;
 
 export function getSocket(): ArcadeSocket {
   if (!socket) {
-    socket = io({ path: '/socket.io', transports: ['websocket', 'polling'] });
+    // Polling first, then upgrade to WebSocket. Some mobile carriers, school
+    // Wi-Fi and proxies stall the WebSocket handshake instead of failing fast;
+    // starting with polling connects immediately and upgrades transparently,
+    // so the first request never hangs waiting on a blocked WS upgrade.
+    socket = io({ path: '/socket.io', transports: ['polling', 'websocket'] });
   }
   return socket;
 }
@@ -19,7 +23,7 @@ export function getSocket(): ArcadeSocket {
 /** Promise wrapper around an ack-style emit, with a safety timeout. */
 export function request<T>(
   emit: (ack: (res: ({ ok: true } & T) | { ok: false; error: string }) => void) => void,
-  timeoutMs = 8000,
+  timeoutMs = 12000,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('The server did not respond. Check your connection.')), timeoutMs);

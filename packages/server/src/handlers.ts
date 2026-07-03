@@ -98,6 +98,18 @@ export function attachHandlers(io: IO): RoomManager {
           manager.updateConfig(room, action.config);
           changed = true;
           break;
+        case 'kickPlayer': {
+          const kicked = manager.removePlayer(room, action.playerId);
+          if (!kicked) return ack({ ok: false, error: 'Player not found.' });
+          const kickedSocket = kicked.socketId ? io.sockets.sockets.get(kicked.socketId) : undefined;
+          if (kickedSocket) {
+            kickedSocket.emit('room:closed', { reason: 'The host removed you from this room.' });
+            kickedSocket.leave(room.code);
+            kickedSocket.data = {};
+          }
+          changed = true;
+          break;
+        }
         case 'endRoom':
           io.to(room.code).emit('room:closed', { reason: 'The host ended the session.' });
           manager.closeRoom(room);
@@ -125,9 +137,11 @@ export function attachHandlers(io: IO): RoomManager {
       player.socketId = socket.id;
       socket.data = { roomCode: room.code, role: 'player', playerId: player.id };
       socket.join(room.code);
-      // Auto-balance into a team on join (product §6.1) so players don't get
-      // stuck in the lobby — they can still switch teams from the player page.
-      manager.pickGroup(room, player, null);
+      // Solo play (groupSize 1): each player is their own seat — nothing to
+      // choose, so auto-balance them in. Real teams / parallel groups: leave
+      // them in the lobby to pick their own group (they can switch until the
+      // game starts).
+      if (room.config.groupSize === 1) manager.pickGroup(room, player, null);
       ack({ ok: true, playerId: player.id, playerToken: player.token, roomCode: room.code });
       broadcast(room);
     });
