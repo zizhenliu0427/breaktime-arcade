@@ -42,6 +42,19 @@ const aliveLabel = computed(() => {
 const revealReady = computed(() => player.myGroup?.readyMemberIds.length ?? 0);
 const revealTotal = computed(() => player.myGroup?.playerCount ?? 0);
 const voteLabel = computed(() => (player.mode === 'team' && !isSolo.value ? t('game.vLabelTeams') : t('game.vLabelPlayers')));
+// The label for "this seat is you". team mode: the team/group name; otherwise
+// (groups mode or solo): the player's own name.
+const mySeatLabel = computed(() => {
+  if (player.mode === 'team' && !isSolo.value) return player.myGroup?.name ?? '';
+  return player.name || '';
+});
+// In team mode a seat id is a groupId; in groups mode it's a playerId. The
+// speak-order list reuses the same id space, so "is this seat me?" must check
+// the right one.
+function isMySeat(seatId: string): boolean {
+  if (player.mode === 'team') return player.myGroup?.id === seatId;
+  return player.playerId === seatId;
+}
 
 function roleLabel(role: string): string {
   if (player.mode === 'team' && !isSolo.value) {
@@ -76,6 +89,15 @@ const isSelfVote = computed(() => {
   if (!choice.value) return false;
   return player.voteTargets.find((t) => t.id === choice.value)?.isSelf ?? false;
 });
+
+// Am I Mr White? The secret payload gives a null word for Mr White only.
+const iAmMrWhite = computed(() => player.secret !== null && player.secret.word === null);
+// Bad-guy side won (undercover or mrWhite winner). When the undercover wins,
+// Mr White (same side) also wins; when Mr White is the last bad guy standing,
+// the winner is reported as 'mrWhite'.
+const badSideWon = computed(() => player.winner === 'undercover' || player.winner === 'mrWhite');
+// Show "you also won" only when this player is Mr White and the bad side won.
+const mrWhiteAlsoWon = computed(() => iAmMrWhite.value && badSideWon.value);
 
 function pickGroup(id: string | null) {
   void player.pickGroup(id);
@@ -164,7 +186,10 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
         <!-- reveal: hold to see the word (team: shared; groups: your own) -->
         <section v-else-if="player.phase === 'reveal'" key="reveal" class="stage reveal pop">
           <template v-if="player.secret">
-            <p class="who">{{ t('game.secretWordOnly') }}</p>
+            <p class="who">
+              <span v-if="mySeatLabel" class="seat-tag">{{ t('game.youAreSeat', { name: mySeatLabel }) }}</span>
+              {{ t('game.secretWordOnly') }}
+            </p>
             <button
               class="word-card"
               :class="{ holding }"
@@ -224,7 +249,7 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
               }"
             >
               <span class="num">{{ i + 1 }}</span>
-              <span class="name">{{ s.name }}<span v-if="s.id === player.playerId"> {{ t('game.you') }}</span></span>
+              <span class="name">{{ s.name }}<span v-if="isMySeat(s.id)"> {{ t('game.you') }}</span></span>
               <span
                 v-if="(player.mode === 'team' ? player.room?.currentSpeakerGroupId : player.myGroup?.currentSpeakerId) === s.id"
                 class="now"
@@ -257,6 +282,10 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
           <div v-if="player.isRunoffVote" class="banner" role="status">
             {{ t('game.tieBreakRevote', { vLabel: voteLabel }) }}
           </div>
+          <!-- prominent countdown -->
+          <div class="ring vote-ring">
+            <TimerRing :remaining="remaining" :total="ringTotal" :size="130" />
+          </div>
           <h2>{{ t('game.castYourVote') }}</h2>
           <template v-if="player.canIVote">
             <p class="sub">
@@ -286,6 +315,7 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
           </template>
           <div v-else class="voted">
             <p class="progress">🗳 {{ t('host.room.votedPlayers', { voted: player.votesIn, total: player.votersTotal }) }}</p>
+            <p v-if="seconds !== null" class="vote-timer" :class="{ urgent: remaining <= 5 }">⏱ {{ remaining }}s</p>
             <p class="waiting">
               {{
                 player.myVote
@@ -335,6 +365,7 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
             <p v-if="player.undercoverId" class="reveal-line">
               {{ t('game.undercoverWas', { label: voteLabel, name: player.nameOf(player.undercoverId) }) }}
             </p>
+            <p v-if="mrWhiteAlsoWon" class="mrwhite-win">{{ t('game.mrWhiteAlsoWon') }}</p>
             <div class="words">
               <div class="word-box civ">
                 <span class="label">{{ t('game.civilianWord') }}</span>
@@ -349,7 +380,12 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
           </div>
         </section>
 
-        <section v-else key="idle" class="loading">{{ t('game.waitingForHost') }}</section>
+        <section v-else key="idle" class="stage idle pop">
+          <p v-if="mySeatLabel" class="who">
+            <span class="seat-tag">{{ t('game.youAreSeat', { name: mySeatLabel }) }}</span>
+          </p>
+          <p class="loading">{{ t('game.waitingForHost') }}</p>
+        </section>
       </Transition>
     </template>
   </div>
@@ -495,6 +531,17 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
 .who {
   font-weight: 700;
   margin-bottom: 14px;
+}
+
+.seat-tag {
+  display: inline-block;
+  background: var(--violet-050);
+  color: var(--violet-600);
+  border-radius: var(--radius-s);
+  padding: 3px 9px;
+  margin-right: 8px;
+  font-size: 0.88em;
+  font-weight: 700;
 }
 
 .word-card {
@@ -653,6 +700,23 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
 }
 
 /* ── Vote ───────────────────────────────────── */
+.vote-ring {
+  margin-bottom: 4px;
+}
+
+.vote-timer {
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  margin: 8px 0;
+  color: var(--ink-soft);
+}
+
+.vote-timer.urgent {
+  color: var(--danger);
+  animation: pulse-soft 0.8s ease-in-out infinite;
+}
+
 .targets {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -851,6 +915,15 @@ const confetti = Array.from({ length: 36 }, (_, i) => {
 
 .reveal-line {
   margin-bottom: 20px;
+}
+
+.mrwhite-win {
+  font-weight: 800;
+  color: var(--accent-press);
+  background: var(--violet-050);
+  border-radius: var(--radius-s);
+  padding: 8px 12px;
+  margin: -8px 0 20px;
 }
 
 .words {

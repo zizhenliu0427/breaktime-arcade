@@ -36,12 +36,12 @@ export interface RoomConfig {
   voteSeconds: number;
 }
 
-/** Recommended classroom defaults (product plan §14). */
+/** Recommended defaults (product plan §14). */
 export const DEFAULT_ROOM_CONFIG: RoomConfig = {
   sessionName: 'Undercover Party',
-  groupCount: 4,
-  groupSize: 6,
-  groupNames: ['Group 1', 'Group 2', 'Group 3', 'Group 4'],
+  groupCount: 6,
+  groupSize: 1,
+  groupNames: ['Group 1', 'Group 2', 'Group 3', 'Group 4', 'Group 5', 'Group 6'],
   mode: 'team',
   packId: 'en-easy',
   undercoverCount: 1,

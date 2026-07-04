@@ -5,7 +5,7 @@
  * Buckets are lazily created and cleaned up on each check, so memory stays bounded
  * even under a sustained spike (each unique key costs one Map entry).
  *
- * Intentionally permissive defaults — this is a classroom game, not a bank.
+ * Intentionally permissive defaults — this is a party game, not a bank.
  * The goal is to prevent runaway automation, not to cap normal usage.
  */
 

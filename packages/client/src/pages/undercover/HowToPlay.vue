@@ -30,6 +30,9 @@ const { t } = useI18n();
       <p class="tip">
         {{ t('howTo.tip') }}
       </p>
+      <p class="tip tip-note">
+        {{ t('howTo.mrWhiteNote') }}
+      </p>
     </div>
 
     <div class="actions rise" style="animation-delay: 120ms">
@@ -54,6 +57,13 @@ const { t } = useI18n();
   border-radius: var(--radius-s);
   padding: 12px 14px;
   font-size: 0.92rem;
+}
+
+.tip-note {
+  margin-top: 8px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--line);
+  color: var(--ink-soft);
 }
 
 .actions {

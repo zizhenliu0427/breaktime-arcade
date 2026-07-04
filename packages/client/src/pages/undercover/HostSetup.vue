@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { DEFAULT_ROOM_CONFIG, GROUP_IDS, wordPacks } from '@arcade/shared';
@@ -24,8 +24,8 @@ const creating = ref(false);
  */
 type PlayStyle = 'solo' | 'teams' | 'parallel';
 
-/** Above this, solo turn-taking (everyone speaks + votes one at a time) gets slow. */
-const SOLO_COMFORTABLE_MAX = 12;
+/** Above this many players in a single game, turn-taking (speak + vote) gets slow. */
+const COMFORTABLE_MAX = 12;
 
 function styleFromConfig(): PlayStyle {
   if (config.mode === 'groups') return 'parallel';
@@ -41,20 +41,49 @@ const styles = computed(() => [
 
 function setStyle(s: PlayStyle) {
   playStyle.value = s;
+  const minCount = (config.includeMrWhite && s === 'teams') ? 4 : 3;
+  const minSize = (config.includeMrWhite && s === 'parallel') ? 4 : 3;
+  const minSolo = config.includeMrWhite ? 4 : 3;
+
   if (s === 'solo') {
     config.mode = 'team';
     config.groupSize = 1;
-    if (config.groupCount < 3) config.groupCount = 6;
+    if (config.groupCount < minSolo) config.groupCount = Math.max(6, minSolo);
   } else if (s === 'teams') {
     config.mode = 'team';
     if (config.groupSize < 2) config.groupSize = 6;
-    if (config.groupCount < 3) config.groupCount = 4;
+    if (config.groupCount < minCount) config.groupCount = Math.max(4, minCount);
   } else {
     config.mode = 'groups';
-    if (config.groupSize < 3) config.groupSize = 6;
+    if (config.groupSize < minSize) config.groupSize = Math.max(6, minSize);
     if (config.groupCount < 1) config.groupCount = 4;
   }
 }
+
+// Watch includeMrWhite to automatically adjust configurations to the minimum of 4 players
+watch(() => config.includeMrWhite, (include) => {
+  if (include) {
+    if (playStyle.value === 'solo' && config.groupCount < 4) {
+      config.groupCount = 4;
+    } else if (playStyle.value === 'teams' && config.groupCount < 4) {
+      config.groupCount = 4;
+    } else if (playStyle.value === 'parallel' && config.groupSize < 4) {
+      config.groupSize = 4;
+    }
+  }
+});
+
+// Clamp free-form numeric inputs to the server's legal ranges. The server
+// re-clamps too, but we do it on blur (not on every keystroke via a watcher)
+// so typing into the field doesn't fight the user mid-input.
+const clampTo = (v: number, lo: number, hi: number, fallback: number) => {
+  const n = Math.round(v);
+  if (Number.isNaN(n)) return fallback;
+  return Math.min(Math.max(n, lo), hi);
+};
+function clampUndercover() { config.undercoverCount = clampTo(config.undercoverCount, 1, 5, 1); }
+function clampDiscuss() { config.discussSeconds = clampTo(config.discussSeconds, 10, 300, 45); }
+function clampVote() { config.voteSeconds = clampTo(config.voteSeconds, 10, 120, 20); }
 
 const showGroupControls = computed(() => playStyle.value === 'teams' || playStyle.value === 'parallel');
 const showSoloControl = computed(() => playStyle.value === 'solo');
@@ -64,12 +93,42 @@ const countLabel = computed(() =>
 const sizeLabel = computed(() =>
   playStyle.value === 'parallel' ? t('host.setup.perGroup') : t('host.setup.perTeam'),
 );
-const countOptions = computed(() => (playStyle.value === 'parallel' ? [1, 2, 3, 4, 5, 6] : [3, 4, 5, 6]));
-const sizeOptions = computed(() =>
-  playStyle.value === 'parallel' ? [3, 4, 5, 6, 7, 8, 9, 10] : [2, 3, 4, 5, 6, 7, 8, 9, 10],
+const MAX_GROUP_COUNT = 24;
+const countOptions = computed(() => {
+  if (playStyle.value === 'parallel') return Array.from({ length: MAX_GROUP_COUNT }, (_, i) => i + 1);
+  const min = (config.includeMrWhite && playStyle.value === 'teams') ? 4 : 3;
+  return Array.from({ length: MAX_GROUP_COUNT - min + 1 }, (_, i) => min + i);
+});
+const sizeOptions = computed(() => {
+  if (playStyle.value === 'parallel') {
+    const min = config.includeMrWhite ? 4 : 3;
+    return Array.from({ length: MAX_GROUP_COUNT - min + 1 }, (_, i) => min + i);
+  }
+  return Array.from({ length: MAX_GROUP_COUNT - 1 }, (_, i) => i + 2); // 2..MAX
+});
+const soloCountOptions = computed(() => {
+  const min = config.includeMrWhite ? 4 : 3;
+  return Array.from({ length: GROUP_IDS.length - min + 1 }, (_, i) => min + i);
+});
+// One "seat" = one unit that speaks/votes in a game:
+//   solo     → each player is a seat            (groupCount)
+//   teams    → each TEAM is a seat              (groupCount) — members share one word
+//   parallel → each group is its own game        (groupSize)  — seats live inside one group
+const perGameSeats = computed(() =>
+  playStyle.value === 'parallel' ? config.groupSize : config.groupCount,
 );
-const soloCountOptions = computed(() => Array.from({ length: GROUP_IDS.length - 2 }, (_, i) => i + 3)); // 3..24
-const soloTooLarge = computed(() => playStyle.value === 'solo' && config.groupCount > SOLO_COMFORTABLE_MAX);
+const tooLarge = computed(() => perGameSeats.value > COMFORTABLE_MAX);
+
+// Recommended undercover count ≈ seats / 4 (1 for 3–5, 2 for 6–8, 3 for 9–12…).
+// Pure UI hint — the host can still pick any value in range.
+const recommendedUndercovers = computed(() => Math.max(1, Math.round(perGameSeats.value / 4)));
+const undercoverHint = computed(() => {
+  const rec = recommendedUndercovers.value;
+  if (config.undercoverCount === rec) return '';            // already on the recommended value
+  return t('host.setup.undercoverHint', { players: perGameSeats.value, n: rec });
+});
+// Mr White is more fun (and fairer) with ≥6 players in a game.
+const mrWhiteHintOn = computed(() => perGameSeats.value < 6);
 
 const capacityHint = computed(() => {
   if (playStyle.value === 'solo') return t('host.setup.capSolo', { n: config.groupCount });
@@ -155,7 +214,7 @@ async function create() {
       </div>
 
       <p class="hint cap-hint">{{ capacityHint }}</p>
-      <p v-if="soloTooLarge" class="hint solo-warning">⚠️ {{ t('host.setup.soloLargeWarning') }}</p>
+      <p v-if="tooLarge" class="hint solo-warning">⚠️ {{ t('host.setup.tooLargeWarning') }}</p>
     </div>
 
     <!-- Game options -->
@@ -172,27 +231,24 @@ async function create() {
         </label>
         <label class="field">
           <span>{{ t('host.setup.undercoverCount') }}</span>
-          <select v-model.number="config.undercoverCount">
-            <option v-for="n in [1, 2, 3]" :key="n" :value="n">{{ n }}</option>
-          </select>
+          <input v-model.number="config.undercoverCount" type="number" min="1" max="5" step="1" inputmode="numeric" @blur="clampUndercover" />
+          <span v-if="undercoverHint" class="field-hint">💡 {{ undercoverHint }}</span>
         </label>
         <label class="field">
           <span>{{ t('host.setup.discussTimer') }}</span>
-          <select v-model.number="config.discussSeconds">
-            <option v-for="s in [30, 45, 60, 90, 120]" :key="s" :value="s">{{ s }}s</option>
-          </select>
+          <input v-model.number="config.discussSeconds" type="number" min="10" max="300" step="5" inputmode="numeric" @blur="clampDiscuss" />
+          <span class="field-suffix">s</span>
         </label>
         <label class="field">
           <span>{{ t('host.setup.voteTimer') }}</span>
-          <select v-model.number="config.voteSeconds">
-            <option v-for="s in [15, 20, 30, 45, 60]" :key="s" :value="s">{{ s }}s</option>
-          </select>
+          <input v-model.number="config.voteSeconds" type="number" min="10" max="120" step="5" inputmode="numeric" @blur="clampVote" />
+          <span class="field-suffix">s</span>
         </label>
       </div>
       <label class="toggle">
         <input v-model="config.includeMrWhite" type="checkbox" />
         <span>{{ t('host.setup.mrWhite') }}</span>
-        <span class="toggle-hint">{{ t('host.setup.mrWhiteHint') }}</span>
+        <span class="toggle-hint">{{ mrWhiteHintOn ? t('host.setup.mrWhiteHintFew') : t('host.setup.mrWhiteHint') }}</span>
       </label>
     </div>
 
@@ -225,6 +281,7 @@ async function create() {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  align-items: flex-start; /* don't stretch fields to equal height — a hint under one field must not push the others' inputs down */
 }
 
 .group-row {
@@ -236,6 +293,7 @@ async function create() {
   gap: 4px;
   flex: 1;
   min-width: 140px;
+  position: relative;
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--ink-soft);
@@ -257,6 +315,41 @@ async function create() {
 .field select:focus {
   outline: none;
   border-color: var(--violet-600);
+}
+
+/* small inline hint below a field (e.g. recommended value) */
+.field-hint {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+
+/* unit suffix next to a numeric input ("s" for seconds) */
+.field-suffix {
+  position: absolute;
+  right: 12px;
+  bottom: 11px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  pointer-events: none;
+}
+
+.field:has(.field-suffix) input {
+  position: relative;
+  padding-right: 26px;
+}
+
+/* hide the spinner arrows on number inputs — the step + clamp does it */
+.field input[type="number"]::-webkit-outer-spin-button,
+.field input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.field input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 /* ── Play-style cards ───────────────────────── */

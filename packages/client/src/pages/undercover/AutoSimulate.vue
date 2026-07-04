@@ -139,7 +139,16 @@ function botVote(g: LocalGame, voterId: string): string {
 function clueStep() {
   const g = game.value!;
   const speaker = currentSpeakerId.value;
-  if (speaker) pushLog(t('sim.log.clue', { name: playerName(speaker) }), 'clue');
+  if (speaker) {
+    const speakerPlayer = g.players.find((p) => p.id === speaker);
+    const isMrWhite = speakerPlayer?.role === 'mrWhite';
+    pushLog(
+      isMrWhite
+        ? t('sim.log.clueMrWhite', { name: playerName(speaker) })
+        : t('sim.log.clue', { name: playerName(speaker) }),
+      'clue',
+    );
+  }
   const before = g.phase;
   const ng = nextSpeaker(g);
   game.value = ng;
@@ -393,7 +402,9 @@ onUnmounted(() => {
             <span v-if="p.id === currentSpeakerId" class="mic">🎤</span>
             <span v-else-if="!p.alive" class="skull">💀</span>
           </div>
-          <div class="pc-word">{{ p.word ?? '—' }}</div>
+          <div class="pc-word" :class="{ 'pc-word-mw': p.role === 'mrWhite' }">
+            {{ p.role === 'mrWhite' ? t('sim.mrWhiteCard') : (p.word ?? '—') }}
+          </div>
           <div class="pc-role">
             <span class="tag" :class="p.role">{{ roleLabel(p.role) }}</span>
           </div>
@@ -610,6 +621,13 @@ input[type='checkbox'] {
   font-size: 1.15rem;
   font-weight: 800;
   color: var(--violet-700);
+}
+
+.pc-word-mw {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #8a5b00;
+  font-style: italic;
 }
 
 .tag {

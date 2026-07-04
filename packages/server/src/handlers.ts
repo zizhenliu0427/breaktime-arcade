@@ -79,12 +79,17 @@ export function attachHandlers(io: IO): RoomManager {
 
       let changed = false;
       switch (action.type) {
-        case 'startGame':
+        case 'startGame': {
           if (!manager.startGame(room)) {
-            return ack({ ok: false, error: 'Need at least 3 teams with players to start.' });
+            const isSolo = room.config.mode === 'team' && room.config.groupSize === 1;
+            const specials = room.config.undercoverCount + (room.config.includeMrWhite ? 1 : 0);
+            const minNeeded = specials + 2; // at least 2 civilians
+            const unit = isSolo ? 'players' : 'teams with players';
+            return ack({ ok: false, error: `Need at least ${minNeeded} ${unit} to start.` });
           }
           changed = true;
           break;
+        }
         case 'skipPhase':
           changed = manager.skipPhase(room, action.groupId ?? null);
           break;

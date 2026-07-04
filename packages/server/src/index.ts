@@ -14,14 +14,6 @@ const app = express();
 // Trust the first hop reverse proxy (Render, Railway, Cloudflare, Nginx…)
 // so req.ip / req.protocol / req.hostname reflect the real client values.
 app.set('trust proxy', 1);
-const http = createServer(app);
-
-const io = new Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>(
-  http,
-  { cors: { origin: true } },
-);
-
-attachHandlers(io);
 
 /** Used by the host's connectivity switch to probe whether an endpoint is reachable. */
 app.get('/health', (_req, res) => {
@@ -49,6 +41,28 @@ app.get('*', (_req, res) => {
   res.sendFile(path.join(clientDist, 'index.html'));
 });
 
-http.listen(PORT, () => {
-  console.log(`Breaktime Arcade server listening on http://localhost:${PORT}`);
-});
+function startServer(port: number, retries = 10): void {
+  const tryHttp = createServer(app);
+  const tryIo = new Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>(
+    tryHttp,
+    { cors: { origin: true } },
+  );
+  attachHandlers(tryIo);
+
+  tryHttp.once('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE' && retries > 0) {
+      console.warn(`⚠ Port ${port} is in use, trying ${port + 1}…`);
+      tryHttp.close();
+      startServer(port + 1, retries - 1);
+    } else {
+      throw err;
+    }
+  });
+
+  tryHttp.listen(port, () => {
+    console.log(`Breaktime Arcade server listening on http://localhost:${port}`);
+  });
+}
+
+startServer(PORT);
+

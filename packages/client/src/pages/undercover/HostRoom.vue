@@ -3,9 +3,10 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import QRCode from 'qrcode';
 import { useI18n } from 'vue-i18n';
-import type { LocalPhase, PublicGroupState, Role } from '@arcade/shared';
+import type { LocalPhase, PublicGroupState, Role, RoomConfig } from '@arcade/shared';
 import { GROUP_IDS, wordPacks } from '@arcade/shared';
 import BaseButton from '../../components/ui/BaseButton.vue';
+import TimerRing from '../../components/ui/TimerRing.vue';
 import { useOnlineHostStore } from '../../stores/onlineHost';
 
 const { t } = useI18n();
@@ -76,9 +77,29 @@ const mode = computed(() => host.room?.config.mode);
 // Solo play (groupSize 1): each "group" is one player — talk about players, not teams.
 const isSolo = computed(() => mode.value === 'team' && host.room?.config.groupSize === 1);
 const joinedCount = computed(() => host.room?.players.length ?? 0);
+
+/* Timer ring values for the progress card */
+const hostTimerRemaining = computed(() => secondsLeft(host.room?.phaseEndsAt ?? null) ?? 0);
+const hostTimerTotal = computed(() => {
+  const phase = host.room?.phase;
+  if (phase === 'discuss') return host.room?.config.discussSeconds ?? 45;
+  if (phase === 'vote' || phase === 'runoff') return host.room?.config.voteSeconds ?? 20;
+  return host.room?.config.discussSeconds ?? 45;
+});
+const showHostTimer = computed(() => secondsLeft(host.room?.phaseEndsAt ?? null) !== null);
 /** Live resize options (settings panel). Server clamps below the occupied-group floor. */
-const liveCountOptions = computed(() => GROUP_IDS.map((_, i) => i + 1));
-const liveSizeOptions = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+const liveCountOptions = computed(() => {
+  const r = host.room;
+  if (!r) return GROUP_IDS.map((_, i) => i + 1);
+  const min = (r.config.includeMrWhite && (isSolo.value || mode.value === 'team')) ? 4 : 1;
+  return Array.from({ length: GROUP_IDS.length - min + 1 }, (_, i) => min + i);
+});
+const liveSizeOptions = computed(() => {
+  const r = host.room;
+  if (!r) return [2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const min = (r.config.includeMrWhite && mode.value === 'groups') ? 4 : 2;
+  return Array.from({ length: 10 - min + 1 }, (_, i) => min + i);
+});
 const countLabel = computed(() => {
   if (isSolo.value) return t('host.setup.numPlayers');
   return mode.value === 'groups' ? t('host.setup.numGroups') : t('host.setup.numTeams');
@@ -101,6 +122,30 @@ const memTotal = computed(
   () => host.room && Object.values(host.room.groups).reduce((s, g) => s + g.playerCount, 0),
 );
 
+/**
+ * Solo mode: flatten all groups into a single player list.
+ * Each entry has the player info + their groupId (for role lookup).
+ */
+const soloPlayers = computed(() => {
+  if (!isSolo.value || !host.room) return [];
+  const result: { playerId: string; groupId: string; name: string; connected: boolean; alive: boolean }[] = [];
+  for (const g of Object.values(host.room.groups)) {
+    for (const pid of g.memberIds) {
+      const p = host.playerById(pid);
+      if (p) {
+        result.push({
+          playerId: p.id,
+          groupId: g.id,
+          name: p.name,
+          connected: p.connected,
+          alive: g.alive,
+        });
+      }
+    }
+  }
+  return result;
+});
+
 /** team mode: the group's role. */
 function teamGroupRole(groupId: string): Role | undefined {
   return host.secrets && host.secrets.kind === 'team' ? host.secrets.roles[groupId] : undefined;
@@ -121,6 +166,20 @@ function toggleReveal() {
       return;
   }
   answersRevealed.value = !answersRevealed.value;
+}
+
+function updateMrWhite(checked: boolean) {
+  const updates: Partial<RoomConfig> = { includeMrWhite: checked };
+  if (checked && host.room) {
+    if (isSolo.value && host.room.config.groupCount < 4) {
+      updates.groupCount = 4;
+    } else if (mode.value === 'team' && host.room.config.groupCount < 4) {
+      updates.groupCount = 4;
+    } else if (mode.value === 'groups' && host.room.config.groupSize < 4) {
+      updates.groupSize = 4;
+    }
+  }
+  void host.action({ type: 'updateConfig', config: updates });
 }
 
 async function endRoom() {
@@ -148,7 +207,7 @@ function kickPlayer(playerId: string, name: string) {
       <div class="card headline rise">
         <div class="join-info">
           <p class="session-name">{{ host.room.config.sessionName }}</p>
-          <p class="mode-tag">{{ mode === 'team' ? t('host.setup.modeTeam') : t('host.setup.modeGroups') }}</p>
+          <p class="mode-tag">{{ isSolo ? t('host.setup.modeSolo') : mode === 'team' ? t('host.setup.modeTeam') : t('host.setup.modeGroups') }}</p>
           <p class="join-label">{{ t('host.room.joinTitle') }}</p>
           <p class="join-url">{{ host.joinUrl ?? '…' }}</p>
           <p class="room-code" aria-label="Room code">{{ host.room.code }}</p>
@@ -196,7 +255,7 @@ function kickPlayer(playerId: string, name: string) {
             <input
               type="checkbox"
               :checked="host.room.config.includeMrWhite"
-              @change="host.action({ type: 'updateConfig', config: { includeMrWhite: ($event.target as HTMLInputElement).checked } })"
+              @change="updateMrWhite(($event.target as HTMLInputElement).checked)"
             />
             <span>Include Mr White</span>
           </label>
@@ -272,11 +331,9 @@ function kickPlayer(playerId: string, name: string) {
         <div class="prog-head">
           <span class="phase-tag">{{ phaseLabel(host.room.phase) }}</span>
           <span v-if="host.room.round" class="round-tag">{{ t('host.room.roundNum', { n: host.room.round }) }}</span>
-          <span
-            v-if="secondsLeft(host.room.phaseEndsAt) !== null"
-            class="timer"
-            :class="{ urgent: (secondsLeft(host.room.phaseEndsAt) ?? 99) <= 10 }"
-          >⏱ {{ secondsLeft(host.room.phaseEndsAt) }}s</span>
+          <div v-if="showHostTimer" class="host-timer-ring">
+            <TimerRing :remaining="hostTimerRemaining" :total="hostTimerTotal" :size="90" />
+          </div>
         </div>
         <p v-if="host.room.phase === 'reveal'" class="prog-line">🔐 {{ t('host.room.membersReady', { ready: readyTotal, total: memTotal }) }}</p>
         <p v-else-if="host.room.currentSpeakerGroupId" class="prog-line">
@@ -299,15 +356,36 @@ function kickPlayer(playerId: string, name: string) {
       </div>
 
       <p v-if="unassigned.length" class="card unassigned rise">
-        <strong>{{ t('host.room.choosingTeam') }}</strong>
+        <strong>{{ t(isSolo ? 'host.room.choosingName' : 'host.room.choosingTeam') }}</strong>
         <span v-for="p in unassigned" :key="p.id" class="chip">
           {{ p.name }}
           <button type="button" class="kick-btn" :title="t('host.room.kick')" @click="kickPlayer(p.id, p.name)">✕</button>
         </span>
       </p>
 
-      <!-- Team cards -->
-      <div class="groups">
+      <!-- Solo mode: flat player list (no group cards) -->
+      <template v-if="isSolo">
+        <div class="card solo-players rise">
+          <ul class="members solo-list">
+            <li
+              v-for="sp in soloPlayers"
+              :key="sp.playerId"
+              :class="{ off: !sp.connected, out: host.room?.started && !sp.alive }"
+            >
+              <span class="dot" :class="sp.connected ? 'on' : 'off'" />
+              {{ sp.name }}
+              <span v-if="answersRevealed && teamGroupRole(sp.groupId)" class="reveal-tag">{{ roleLabel(teamGroupRole(sp.groupId)) }}</span>
+              <button type="button" class="kick-btn" :title="t('host.room.kick')" @click="kickPlayer(sp.playerId, sp.name)">✕</button>
+            </li>
+          </ul>
+          <p v-if="soloPlayers.length === 0" class="solo-empty">
+            {{ t('host.room.noPlayers') }}
+          </p>
+        </div>
+      </template>
+
+      <!-- Team / Groups cards (non-solo modes) -->
+      <div v-else class="groups">
         <div
           v-for="g in activeGroups"
           :key="g.id"
@@ -476,16 +554,8 @@ function kickPlayer(playerId: string, name: string) {
   color: var(--ink-soft);
 }
 
-.timer {
+.host-timer-ring {
   margin-left: auto;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  font-size: 1.3rem;
-}
-
-.timer.urgent {
-  color: var(--danger);
-  animation: pulse-soft 1s ease-in-out infinite;
 }
 
 .prog-line {
@@ -507,6 +577,27 @@ function kickPlayer(playerId: string, name: string) {
   border-radius: 999px;
   padding: 2px 8px;
   margin-left: 6px;
+}
+
+
+/* ── Solo player list (individual mode) ── */
+.solo-players {
+  margin-bottom: 16px;
+}
+
+.solo-list {
+  gap: 8px;
+}
+
+.solo-list li {
+  font-size: 0.95rem;
+  padding: 6px 14px;
+}
+
+.solo-empty {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
 }
 
 .unassigned {
