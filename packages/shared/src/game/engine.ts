@@ -107,6 +107,12 @@ export function resolveVotes(game: LocalGame): LocalGame {
   if (top.length === 1) {
     return eliminate(game, top[0]!);
   }
+  // Everyone tied (or an empty ballot): nobody can break it, so skip the
+  // runoff and move on with no elimination this round.
+  const aliveIds = game.players.filter((p) => p.alive).map((p) => p.id);
+  if (top.length >= aliveIds.length) {
+    return { ...game, phase: 'elimination', lastElimination: null };
+  }
   if (!game.isRunoffVote && top.length > 1) {
     return {
       ...game,

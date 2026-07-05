@@ -121,7 +121,7 @@ export const useOnlineHostStore = defineStore('onlineHost', {
     },
 
     /**
-     * Build the URL students should open. If the host page is already open
+     * Build the URL players should open. If the host page is already open
      * on a reachable address, reuse it; on localhost, ask the server for a
      * LAN IP and keep the current port (works for dev :5173 and prod :3000).
      */

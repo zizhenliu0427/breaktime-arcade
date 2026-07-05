@@ -143,7 +143,7 @@ export class RoomManager {
     return {
       sessionName: merged.sessionName.trim().slice(0, 40) || DEFAULT_ROOM_CONFIG.sessionName,
       groupCount,
-      groupSize: clamp(merged.groupSize, 1, 10),
+      groupSize: clamp(merged.groupSize, 1, 24),
       groupNames: this.sanitiseGroupNames(merged.groupNames, groupCount),
       mode: merged.mode === 'groups' ? 'groups' : 'team',
       packId: getWordPack(merged.packId) ? merged.packId : DEFAULT_ROOM_CONFIG.packId,
@@ -443,7 +443,9 @@ export class RoomManager {
     if (next === before) return { error: 'That vote is not allowed.' };
     room.game = next;
     if (allVotesIn(room.game)) this.resolveTeamVotes(room);
-    else this.setTimer(room);
+    // NOTE: do NOT reset the timer here — the vote deadline was set when the
+    // vote phase started and each ballot only fills in data. Resetting would
+    // restart the clock on every vote (bug).
     return true;
   }
 
@@ -459,7 +461,7 @@ export class RoomManager {
     if (next === before) return { error: 'That vote is not allowed.' };
     group.game = next;
     if (allVotesIn(group.game)) this.resolveGroupVotes(room, group);
-    else this.setGroupTimer(room, group);
+    // NOTE: do NOT reset the timer here — see teamCastVote.
     return true;
   }
 
