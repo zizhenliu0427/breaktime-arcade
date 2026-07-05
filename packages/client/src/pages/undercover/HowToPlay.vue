@@ -36,7 +36,7 @@ const { t } = useI18n();
     </div>
 
     <div class="actions rise" style="animation-delay: 120ms">
-      <router-link to="/undercover/pass-and-play">
+      <router-link to="/undercover">
         <BaseButton variant="accent" size="lg">{{ t('howTo.playNow') }}</BaseButton>
       </router-link>
     </div>
